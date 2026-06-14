@@ -25,7 +25,8 @@ No browser. No cloud. No signup. 100% offline once installed.
 git clone <repo-url> kuberT
 cd kuberT
 cp .env.example .env     # optional: tweak env vars
-make install
+make deps                # install kind + kubectl (docker must be installed separately)
+make install             # install python deps with uv
 ```
 
 ## Use
