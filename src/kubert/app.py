@@ -19,10 +19,10 @@ MENU = [
 ]
 
 
-class KubertApp(App[None]):
+class KubertApp(App[str]):
     TITLE = "kuberT"
     SUB_TITLE = "learn Kubernetes in your terminal"
-    BINDINGS = [Binding("q", "quit", "Quit")]
+    BINDINGS = [Binding("q", "exit_quit", "Quit")]
     CSS = """
     Screen { align: center middle; }
     #welcome { margin: 1 4; text-align: center; }
@@ -44,13 +44,31 @@ class KubertApp(App[None]):
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         item_id = event.item.id or ""
-        action = item_id.removeprefix("a-")
-        if action == "quit":
-            self.exit()
+        self.exit(item_id.removeprefix("a-"))
+
+    def action_exit_quit(self) -> None:
+        self.exit("quit")
+
+
+def run() -> None:
+    while True:
+        try:
+            action = KubertApp().run()
+        except Exception as e:
+            console.print(f"[red]App error: {e}[/red]")
             return
-        with self.suspend():
+        if not action or action == "quit":
+            return
+        try:
             _dispatch(action)
-            console.input("\n[dim]Press Enter to return to menu...[/dim]")
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Cancelled.[/yellow]")
+        except Exception as e:
+            console.print(f"\n[red]Error during '{action}': {e}[/red]")
+        try:
+            input("\nPress Enter to return to menu... ")
+        except (EOFError, KeyboardInterrupt):
+            pass
 
 
 def _dispatch(action: str) -> None:
@@ -63,10 +81,7 @@ def _dispatch(action: str) -> None:
     }
     handler = handlers.get(action)
     if handler:
-        try:
-            handler()
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Cancelled.[/yellow]")
+        handler()
 
 
 def _lessons() -> list[Lesson]:
@@ -110,7 +125,3 @@ def _reset() -> None:
     if console.input(f"Delete cluster '{cluster.name()}'? (y/N): ").strip().lower() == "y":
         cluster.delete()
         console.print("[green]Cluster deleted.[/green]")
-
-
-def run() -> None:
-    KubertApp().run()
