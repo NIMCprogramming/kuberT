@@ -15,7 +15,7 @@ The user owns the cluster on their own machine. There is no server, no signup, n
 | Language         | Python 3.11+                                   |
 | Package manager  | `uv`                                           |
 | CLI framework    | Typer                                          |
-| Terminal UI      | Rich                                           |
+| Terminal UI      | Rich + questionary (arrow-key menus)           |
 | Data models      | Pydantic v2                                    |
 | Lessons format   | YAML                                           |
 | Cluster          | Kind (shell out to `kind` and `kubectl`)       |

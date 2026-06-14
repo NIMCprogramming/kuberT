@@ -1,3 +1,5 @@
+import questionary
+
 from kubert.checker import run_check
 from kubert.models import Lesson, ManualCheck, UserProgress
 from kubert.state import save_progress
@@ -25,31 +27,26 @@ def run_lesson(lesson: Lesson, progress: UserProgress) -> bool:
 
     show_task(lesson.task)
 
-    while True:
-        choice = (
-            console.input(
-                "\n[bold]Type [green]check[/green] when ready, "
-                "[yellow]hint[/yellow] for a hint, or [red]skip[/red]:[/bold] "
-            )
-            .strip()
-            .lower()
-        )
+    choices = [
+        questionary.Choice("Check my work",  "check"),
+        questionary.Choice("Show hint",      "hint"),
+        questionary.Choice("Skip lesson",    "skip"),
+    ]
 
-        if choice == "skip":
+    while True:
+        choice = questionary.select("What now?", choices=choices).ask()
+        if choice in (None, "skip"):
             show_info("Lesson skipped.")
             return False
         if choice == "hint":
             show_hint(lesson.hint or "No hint for this lesson.")
             continue
-        if choice == "check":
-            result = run_check(lesson.check)
-            if result.passed:
-                show_success(result.detail)
-                _mark_complete(lesson, progress)
-                return True
-            show_failure(result.detail)
-            continue
-        show_info("Unknown choice. Type check, hint, or skip.")
+        result = run_check(lesson.check)
+        if result.passed:
+            show_success(result.detail)
+            _mark_complete(lesson, progress)
+            return True
+        show_failure(result.detail)
 
 
 def _mark_complete(lesson: Lesson, progress: UserProgress) -> None:

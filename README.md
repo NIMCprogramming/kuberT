@@ -32,23 +32,22 @@ make install             # install python deps with uv
 ## Use
 
 ```bash
-make run      # open the kuberT shell
+make run      # open the kuberT menu (arrow-key navigation)
 ```
 
-Inside the shell:
+A menu appears. Use ↑/↓ to move, Enter to choose:
 
 ```
-kubert> help                              show all commands
-kubert> init                              check tools + create cluster
-kubert> list                              list all lessons
-kubert> next                              run the next unfinished lesson
-kubert> lesson 04-running-apps/01-pods    run a specific lesson
-kubert> status                            cluster status
-kubert> reset                             delete the cluster
-kubert> quit                              exit
+? What do you want to do?
+  > Run next unfinished lesson
+    Pick a lesson from the list
+    Check tools / create cluster
+    Show cluster status
+    Delete cluster
+    Quit
 ```
 
-You can also call any command directly without the shell: `uv run kubert next`, `uv run kubert lesson <id>`, etc.
+You can also call commands directly without the menu: `uv run kubert next`, `uv run kubert lesson <id>`, etc.
 
 ## Roadmap
 
