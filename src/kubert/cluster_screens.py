@@ -1,12 +1,12 @@
 import subprocess
 from collections.abc import Callable
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal
+from textual.containers import Container
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, Footer, Header, Label, RichLog, Static
-from textual import work
+from textual.widgets import Footer, Header, Label, RichLog, Static
 
 from kubert import cluster, prereq
 
@@ -14,15 +14,14 @@ from kubert import cluster, prereq
 class InitScreen(Screen[None]):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
     CSS = """
-    Static { padding: 1 2; }
-    RichLog { border: round $primary; padding: 0 1; margin: 0 2; height: 1fr; }
+    InitScreen { layout: vertical; }
+    #title    { padding: 1 2; }
+    RichLog   { border: round $primary; padding: 0 1; margin: 0 2 1 2; height: 1fr; }
     """
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static(
-            "[b]Setting up the cluster...[/b]  ([yellow]Esc[/yellow] to return when done)"
-        )
+        yield Static("[b]Setting up the cluster...[/b]", id="title")
         yield RichLog(id="log", markup=True)
         yield Footer()
 
@@ -92,28 +91,35 @@ def _stream(cmd: list[str], write: Callable[[str], None]) -> int:
 
 
 class ResetConfirmScreen(ModalScreen[None]):
-    BINDINGS = [Binding("escape", "app.pop_screen", "Cancel")]
+    BINDINGS = [
+        Binding("y",      "do_yes",         "Yes, delete"),
+        Binding("n",      "app.pop_screen", "No, cancel"),
+        Binding("escape", "app.pop_screen", "Cancel"),
+    ]
     CSS = """
     ResetConfirmScreen { align: center middle; }
-    #box { width: 60; height: 11; border: round $error; padding: 1 2; background: $panel; }
-    .buttons { dock: bottom; height: 3; align: center middle; }
-    Button { margin: 0 1; }
+    #box {
+        width: 60; height: 9;
+        border: round $error;
+        padding: 1 2;
+        background: $panel;
+    }
+    #message { padding: 0 0 1 0; text-align: center; }
+    #keys    { text-align: center; color: $accent; }
     """
 
     def compose(self) -> ComposeResult:
         with Container(id="box"):
-            yield Label(f"Delete cluster '{cluster.name()}'?\nThis cannot be undone.")
-            with Horizontal(classes="buttons"):
-                yield Button("Yes, delete", id="yes", variant="error")
-                yield Button("Cancel", id="no", variant="primary")
+            yield Static(
+                f"Delete cluster '{cluster.name()}'?\nThis cannot be undone.",
+                id="message",
+            )
+            yield Static(
+                "Press [b]y[/b] to delete, [b]n[/b] or [b]Esc[/b] to cancel.",
+                id="keys",
+            )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "yes":
-            self._delete()
-        else:
-            self.app.pop_screen()
-
-    def _delete(self) -> None:
+    def action_do_yes(self) -> None:
         if not cluster.exists():
             self.app.notify("No cluster to delete.", severity="warning")
         else:
