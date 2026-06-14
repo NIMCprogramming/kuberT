@@ -27,6 +27,7 @@ task: |
   Wait a few seconds for the image to download.
   When the Pod is `Running`, come back here and type `check`.
 hint: "Use this command: kubectl run hello --image=nginx"
+requires: [cluster]
 check:
   type: command
   cmd: "kubectl get pod hello -o jsonpath='{.status.phase}'"

@@ -28,6 +28,9 @@ Check = Annotated[
 ]
 
 
+Requirement = Literal["cluster"]
+
+
 class Lesson(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str
@@ -39,6 +42,7 @@ class Lesson(BaseModel):
     task: str
     hint: str = ""
     check: Check
+    requires: list[Requirement] = Field(default_factory=list)
 
 
 class UserProgress(BaseModel):

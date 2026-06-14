@@ -83,6 +83,7 @@ intro: |                       # markdown shown to the user
 task: |                        # what the user must do
   ...
 hint: "..."                    # optional one-liner hint
+requires: [cluster]            # what must be ready BEFORE the lesson starts (optional)
 check:
   type: manual                 # OR command / multiple
   # for command:
@@ -90,6 +91,13 @@ check:
   # expect: "Running"
   # timeout_seconds: 30
 ```
+
+#### `requires` field
+
+A list of conditions checked before the lesson runs. Currently supported:
+- `cluster` — a Kind cluster must exist AND be reachable via `kubectl`. If missing, the user is told how to fix it; the lesson does not run.
+
+If a lesson does not need a live cluster (reading-only intro lessons), omit the field.
 
 ## How to run
 

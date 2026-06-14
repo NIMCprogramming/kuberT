@@ -19,6 +19,17 @@ def exists() -> bool:
     return name() in list_clusters()
 
 
+def is_reachable() -> bool:
+    p = subprocess.run(
+        ["kubectl", "cluster-info", "--context", f"kind-{name()}"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    return p.returncode == 0
+
+
 def create() -> None:
     subprocess.run(["docker", "pull", node_image()], check=True)
     subprocess.run(

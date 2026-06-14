@@ -48,3 +48,15 @@ def test_command_check_loads() -> None:
     assert isinstance(pods.check, CommandCheck)
     assert pods.check.cmd
     assert pods.check.expect == "Running"
+
+
+def test_pods_lesson_declares_cluster_requirement() -> None:
+    lessons = discover_lessons(LESSONS_ROOT)
+    pods = next(lesson for lesson in lessons if lesson.id.endswith("pods"))
+    assert "cluster" in pods.requires
+
+
+def test_overview_lesson_has_no_requirements() -> None:
+    lessons = discover_lessons(LESSONS_ROOT)
+    overview = next(lesson for lesson in lessons if lesson.id.endswith("overview"))
+    assert overview.requires == []

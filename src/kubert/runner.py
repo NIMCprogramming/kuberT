@@ -1,5 +1,6 @@
 import questionary
 
+from kubert import cluster
 from kubert.checker import run_check
 from kubert.models import Lesson, ManualCheck, UserProgress
 from kubert.state import save_progress
@@ -17,6 +18,12 @@ from kubert.ui import (
 
 def run_lesson(lesson: Lesson, progress: UserProgress) -> bool:
     show_title(f"{lesson.id} - {lesson.title}")
+
+    ok, msg = _check_requirements(lesson)
+    if not ok:
+        show_failure(msg)
+        return False
+
     show_intro(lesson.intro)
 
     if isinstance(lesson.check, ManualCheck):
@@ -28,9 +35,9 @@ def run_lesson(lesson: Lesson, progress: UserProgress) -> bool:
     show_task(lesson.task)
 
     choices = [
-        questionary.Choice("Check my work",  "check"),
-        questionary.Choice("Show hint",      "hint"),
-        questionary.Choice("Skip lesson",    "skip"),
+        questionary.Choice("Check my work", "check"),
+        questionary.Choice("Show hint",     "hint"),
+        questionary.Choice("Skip lesson",   "skip"),
     ]
 
     while True:
@@ -47,6 +54,21 @@ def run_lesson(lesson: Lesson, progress: UserProgress) -> bool:
             _mark_complete(lesson, progress)
             return True
         show_failure(result.detail)
+
+
+def _check_requirements(lesson: Lesson) -> tuple[bool, str]:
+    if "cluster" in lesson.requires:
+        if not cluster.exists():
+            return False, (
+                "This lesson needs a Kubernetes cluster. "
+                "From the menu, pick 'Check tools / create cluster' first."
+            )
+        if not cluster.is_reachable():
+            return False, (
+                "A cluster exists but kubectl cannot reach it (the container may be stopped). "
+                "From the menu, pick 'Delete cluster' and then 'Check tools / create cluster'."
+            )
+    return True, ""
 
 
 def _mark_complete(lesson: Lesson, progress: UserProgress) -> None:
