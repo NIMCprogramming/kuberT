@@ -1,4 +1,4 @@
-.PHONY: help deps install test lint type init list next reset clean
+.PHONY: help deps install run test lint type init clean
 
 KIND_VERSION    ?= v0.27.0
 KUBECTL_VERSION ?= v1.31.0
@@ -8,13 +8,11 @@ LOCAL_BIN       := $(HOME)/.local/bin
 help:
 	@echo "make deps      install system deps (kind, kubectl); check docker"
 	@echo "make install   install python deps with uv"
+	@echo "make run       open the kuberT shell  (recommended)"
+	@echo "make init      check tools + create cluster (also available inside the shell)"
 	@echo "make test      run pytest"
 	@echo "make lint      run ruff check"
 	@echo "make type      run mypy"
-	@echo "make init      kubert init  (check tools + create cluster)"
-	@echo "make next      kubert next  (run next lesson)"
-	@echo "make list      kubert list  (list lessons)"
-	@echo "make reset     kubert reset (delete cluster)"
 	@echo "make clean     delete .venv and caches"
 
 deps:
@@ -35,6 +33,9 @@ deps:
 install:
 	uv sync --extra dev
 
+run:
+	uv run kubert shell
+
 test:
 	uv run pytest
 
@@ -46,15 +47,6 @@ type:
 
 init:
 	uv run kubert init
-
-next:
-	uv run kubert next
-
-list:
-	uv run kubert list
-
-reset:
-	uv run kubert reset
 
 clean:
 	rm -rf .venv .pytest_cache .mypy_cache .ruff_cache
