@@ -6,20 +6,21 @@ estimated_minutes: 5
 intro: |
   # What is Kubernetes?
 
-  Kubernetes (also called **K8s**) is a system to run apps in containers.
+  Kubernetes is a tool that runs apps in containers.
+  Many people call it **K8s** for short.
 
-  It can:
-  - run many containers across many computers
-  - restart containers if they crash
-  - balance traffic between them
-  - scale up and down
+  Kubernetes can:
+  - run many containers on many computers at the same time
+  - start a container again if it stops working
+  - share work between containers
+  - add more containers when you need more, and remove them when you need less
 
   Why people use it:
-  - your app keeps running even if one server dies
-  - you can push updates with zero downtime
-  - the same setup works on a laptop or 1000 servers
+  - Your app keeps running, even if one computer breaks.
+  - You can change your app without stopping it for users.
+  - The same setup works on a laptop or on 1000 computers.
 
-  This lesson is reading only. Press Enter when you finish.
+  This lesson is only for reading. Press Enter when you finish.
 task: |
   No task. Just press Enter.
 check:

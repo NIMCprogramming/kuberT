@@ -65,8 +65,9 @@ kuberT/
 1. Pick the right module folder in `lessons/` (matches `ROADMAP.md`).
 2. Create `NN-name.yaml` where `NN` is the next number in that folder.
 3. Fill in `id`, `title`, `module`, `order`, `intro`, `task`, `check`.
-4. Run `uv run pytest tests/test_lesson_loader.py` — it validates every YAML.
-5. Update `ROADMAP.md` if the module list changed.
+4. **Write `intro`, `task`, `hint` at A2 English level.** Short sentences (8–12 words), simple words, no idioms. Define every K8s term the first time it appears.
+5. Run `uv run pytest tests/test_lesson_loader.py` — it validates every YAML.
+6. Update `ROADMAP.md` if the module list changed.
 
 ### Lesson YAML schema (summary)
 
