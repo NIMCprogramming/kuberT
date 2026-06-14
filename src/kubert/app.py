@@ -1,13 +1,13 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
-from kubert import bootstrap, cluster
+from kubert import cluster
+from kubert.cluster_screens import InitScreen, ResetConfirmScreen
 from kubert.lesson import discover_lessons, get_default_lessons_root
-from kubert.models import Lesson
-from kubert.runner import run_lesson
+from kubert.lesson_screens import LessonPickerScreen, LessonScreen
 from kubert.state import load_progress
-from kubert.ui import console
 
 MENU = [
     ("next",   "Run next unfinished lesson"),
@@ -19,14 +19,12 @@ MENU = [
 ]
 
 
-class KubertApp(App[str]):
-    TITLE = "kuberT"
-    SUB_TITLE = "learn Kubernetes in your terminal"
-    BINDINGS = [Binding("q", "exit_quit", "Quit")]
+class MainMenuScreen(Screen[None]):
+    BINDINGS = [Binding("q", "app.quit", "Quit")]
     CSS = """
     Screen { align: center middle; }
     #welcome { margin: 1 4; text-align: center; }
-    ListView { margin: 0 4; border: round $accent; padding: 0 1; }
+    ListView { margin: 0 4; width: 60; border: round $accent; padding: 0 1; }
     """
 
     def compose(self) -> ComposeResult:
@@ -43,85 +41,44 @@ class KubertApp(App[str]):
         yield Footer()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        item_id = event.item.id or ""
-        self.exit(item_id.removeprefix("a-"))
+        action = (event.item.id or "").removeprefix("a-")
+        if action == "quit":
+            self.app.exit()
+        elif action == "next":
+            self._open_next()
+        elif action == "pick":
+            self.app.push_screen(LessonPickerScreen())
+        elif action == "init":
+            self.app.push_screen(InitScreen())
+        elif action == "status":
+            self._show_status()
+        elif action == "reset":
+            self.app.push_screen(ResetConfirmScreen())
 
-    def action_exit_quit(self) -> None:
-        self.exit("quit")
+    def _open_next(self) -> None:
+        progress = load_progress()
+        for lesson in discover_lessons(get_default_lessons_root()):
+            if lesson.id not in progress.completed_lessons:
+                self.app.push_screen(LessonScreen(lesson))
+                return
+        self.app.notify("All lessons complete!", severity="information")
+
+    def _show_status(self) -> None:
+        if cluster.exists() and cluster.is_reachable():
+            self.app.notify(f"Cluster '{cluster.name()}' is running.", severity="information")
+        elif cluster.exists():
+            self.app.notify("Cluster exists but kubectl cannot reach it.", severity="warning")
+        else:
+            self.app.notify("No cluster. Pick 'Check tools / create cluster'.", severity="warning")
+
+
+class KubertApp(App[None]):
+    TITLE = "kuberT"
+    SUB_TITLE = "learn Kubernetes in your terminal"
+
+    def on_mount(self) -> None:
+        self.push_screen(MainMenuScreen())
 
 
 def run() -> None:
-    while True:
-        try:
-            action = KubertApp().run()
-        except Exception as e:
-            console.print(f"[red]App error: {e}[/red]")
-            return
-        if not action or action == "quit":
-            return
-        try:
-            _dispatch(action)
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Cancelled.[/yellow]")
-        except Exception as e:
-            console.print(f"\n[red]Error during '{action}': {e}[/red]")
-        try:
-            input("\nPress Enter to return to menu... ")
-        except (EOFError, KeyboardInterrupt):
-            pass
-
-
-def _dispatch(action: str) -> None:
-    handlers = {
-        "next":   _next,
-        "pick":   _pick,
-        "init":   lambda: bootstrap.init_cluster(),
-        "status": _status,
-        "reset":  _reset,
-    }
-    handler = handlers.get(action)
-    if handler:
-        handler()
-
-
-def _lessons() -> list[Lesson]:
-    return discover_lessons(get_default_lessons_root())
-
-
-def _next() -> None:
-    p = load_progress()
-    for lesson in _lessons():
-        if lesson.id not in p.completed_lessons:
-            run_lesson(lesson, p)
-            return
-    console.print("[green]All lessons complete![/green]")
-
-
-def _pick() -> None:
-    lessons = _lessons()
-    p = load_progress()
-    for i, lesson in enumerate(lessons, 1):
-        mark = "[green][x][/green]" if lesson.id in p.completed_lessons else "[dim][ ][/dim]"
-        console.print(f"{i:2}. {mark} {lesson.id} - {lesson.title}")
-    raw = console.input("\nLesson number (Enter to cancel): ").strip()
-    if not raw.isdigit():
-        return
-    idx = int(raw) - 1
-    if 0 <= idx < len(lessons):
-        run_lesson(lessons[idx], p)
-
-
-def _status() -> None:
-    if cluster.exists():
-        console.print(f"[green]Cluster '{cluster.name()}' is running.[/green]")
-    else:
-        console.print("[yellow]No cluster. Pick 'Check tools / create cluster' first.[/yellow]")
-
-
-def _reset() -> None:
-    if not cluster.exists():
-        console.print("[yellow]No cluster to delete.[/yellow]")
-        return
-    if console.input(f"Delete cluster '{cluster.name()}'? (y/N): ").strip().lower() == "y":
-        cluster.delete()
-        console.print("[green]Cluster deleted.[/green]")
+    KubertApp().run()
