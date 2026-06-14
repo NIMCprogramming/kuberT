@@ -15,7 +15,7 @@ The user owns the cluster on their own machine. There is no server, no signup, n
 | Language         | Python 3.11+                                   |
 | Package manager  | `uv`                                           |
 | CLI framework    | Typer                                          |
-| Terminal UI      | Rich + questionary (arrow-key menus)           |
+| Terminal UI      | Textual (full-screen app) + Rich + questionary |
 | Data models      | Pydantic v2                                    |
 | Lessons format   | YAML                                           |
 | Cluster          | Kind (shell out to `kind` and `kubectl`)       |
@@ -33,6 +33,7 @@ kuberT/
 ├── pyproject.toml
 ├── src/kubert/
 │   ├── cli.py             # Typer commands (entry point)
+│   ├── app.py             # Textual full-screen menu app
 │   ├── models.py          # all Pydantic models
 │   ├── lesson.py          # load lessons from YAML
 │   ├── cluster.py         # create/delete Kind cluster

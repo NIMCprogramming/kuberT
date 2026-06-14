@@ -14,8 +14,8 @@ app = typer.Typer(help="kuberT - learn Kubernetes in your terminal.", no_args_is
 
 @app.command()
 def shell() -> None:
-    """Open the interactive kuberT shell (recommended)."""
-    from kubert.shell import run
+    """Open the interactive kuberT app (full-screen, recommended)."""
+    from kubert.app import run
 
     run()
 

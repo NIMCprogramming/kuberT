@@ -32,22 +32,32 @@ make install             # install python deps with uv
 ## Use
 
 ```bash
-make run      # open the kuberT menu (arrow-key navigation)
+make run      # open the kuberT full-screen app
 ```
 
-A menu appears. Use ↑/↓ to move, Enter to choose:
+The app takes over the terminal (like Claude Code). A header at the top, a menu in the middle, key bindings in the footer:
 
 ```
-? What do you want to do?
-  > Run next unfinished lesson
-    Pick a lesson from the list
-    Check tools / create cluster
-    Show cluster status
-    Delete cluster
-    Quit
+┌─ kuberT ─ learn Kubernetes in your terminal ──────┐
+│                                                   │
+│            Welcome to kuberT                       │
+│            Use ↑/↓ to move, Enter to choose.       │
+│                                                   │
+│   ┌─────────────────────────────────────────┐     │
+│   │ > Run next unfinished lesson            │     │
+│   │   Pick a lesson from the list           │     │
+│   │   Check tools / create cluster          │     │
+│   │   Show cluster status                   │     │
+│   │   Delete cluster                        │     │
+│   │   Quit                                  │     │
+│   └─────────────────────────────────────────┘     │
+│                                                   │
+├─ q Quit ──────────────────────────────────────────┤
 ```
 
-You can also call commands directly without the menu: `uv run kubert next`, `uv run kubert lesson <id>`, etc.
+When you pick an action, the app suspends so you can interact with the lesson (run kubectl, see real progress bars, etc.). When the action ends, the menu comes back.
+
+You can also call commands directly without the app: `uv run kubert next`, `uv run kubert lesson <id>`, etc.
 
 ## Roadmap
 
