@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# uv / venv
+.venv/
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# kubert local state (lives in ~/.kubert/, but ignore if anyone makes a local one)
+.kubert/
+
+# env (track .env.example, ignore real .env)
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store

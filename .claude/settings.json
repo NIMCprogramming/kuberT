@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv add:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(kind get clusters)",
+      "Bash(kind get clusters:*)",
+      "Bash(kubectl get:*)",
+      "Bash(kubectl describe:*)"
+    ]
+  }
+}

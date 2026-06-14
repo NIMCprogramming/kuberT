@@ -1,0 +1,26 @@
+id: 01-introduction/01-overview
+title: "What is Kubernetes?"
+module: introduction
+order: 1
+estimated_minutes: 5
+intro: |
+  # What is Kubernetes?
+
+  Kubernetes (also called **K8s**) is a system to run apps in containers.
+
+  It can:
+  - run many containers across many computers
+  - restart containers if they crash
+  - balance traffic between them
+  - scale up and down
+
+  Why people use it:
+  - your app keeps running even if one server dies
+  - you can push updates with zero downtime
+  - the same setup works on a laptop or 1000 servers
+
+  This lesson is reading only. Press Enter when you finish.
+task: |
+  No task. Just press Enter.
+check:
+  type: manual

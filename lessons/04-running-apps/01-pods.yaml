@@ -1,0 +1,33 @@
+id: 04-running-apps/01-pods
+title: "Your first Pod"
+module: running-apps
+order: 1
+estimated_minutes: 10
+intro: |
+  # Pods
+
+  A **Pod** is the smallest unit in Kubernetes.
+  It runs one (or more) containers together.
+
+  Containers in the same Pod:
+  - share the same network (same IP address)
+  - share the same storage (if mounted)
+  - live and die together
+
+  In real life, most Pods have only one container.
+task: |
+  Create a Pod named `hello` that runs the `nginx` image.
+
+  Try this command in another terminal:
+
+  ```
+  kubectl run hello --image=nginx
+  ```
+
+  When the Pod is `Running`, come back and type `check`.
+hint: "kubectl run hello --image=nginx - then wait a few seconds for the image to pull."
+check:
+  type: command
+  cmd: "kubectl get pod hello -o jsonpath='{.status.phase}'"
+  expect: "Running"
+  timeout_seconds: 30
