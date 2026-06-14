@@ -127,6 +127,7 @@ This repo uses `Makefile` + `.env` for easy setup. Standard targets: `make insta
 Supported env vars:
 - `KUBERT_CLUSTER_NAME` — name of the Kind cluster (default: `kubert`).
 - `KUBERT_STATE_DIR` — where to save progress (default: `~/.kubert`).
+- `KUBERT_NODE_IMAGE` — Kind node image (default: `kindest/node:v1.32.2`). We pre-pull this via `docker pull` so the user sees a real progress bar before `kind create cluster` starts.
 
 ## What NOT to do
 
