@@ -64,6 +64,10 @@ You can also call commands directly without the app: `uv run kubert next`, `uv r
 See [ROADMAP.md](./ROADMAP.md) for the full list of modules and lessons.
 The lesson order follows [roadmap.sh/kubernetes](https://roadmap.sh/kubernetes).
 
+## Adding a lesson
+
+See [ADD_LESSON.md](./ADD_LESSON.md) for the full step-by-step guide.
+
 ## Contributing
 
 This project is built with AI agents. See [CLAUDE.md](./CLAUDE.md) for the design rules.

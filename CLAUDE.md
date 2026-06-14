@@ -63,12 +63,15 @@ kuberT/
 
 ## How to add a lesson
 
-1. Pick the right module folder in `lessons/` (matches `ROADMAP.md`).
-2. Create `NN-name.yaml` where `NN` is the next number in that folder.
-3. Fill in `id`, `title`, `module`, `order`, `intro`, `task`, `check`.
-4. **Write `intro`, `task`, `hint` at A2 English level.** Short sentences (8–12 words), simple words, no idioms. Define every K8s term the first time it appears.
-5. Run `uv run pytest tests/test_lesson_loader.py` — it validates every YAML.
-6. Update `ROADMAP.md` if the module list changed.
+Full step-by-step guide: **[ADD_LESSON.md](./ADD_LESSON.md)**.
+
+Quick summary:
+1. Pick the module folder from `ROADMAP.md`.
+2. Create `lessons/NN-module/NN-name.yaml`.
+3. Write `intro`, `task`, `hint` in **A2 English**.
+4. Pick a `check` type: `manual` / `command` / `multiple`.
+5. Add `requires: [cluster]` if the lesson uses kubectl.
+6. Run `make test`. If green, commit.
 
 ### Lesson YAML schema (summary)
 
