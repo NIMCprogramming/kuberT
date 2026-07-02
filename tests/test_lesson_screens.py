@@ -43,6 +43,6 @@ def test_lesson_screen_has_next_binding() -> None:
     assert "n" in keys
 
 
-def test_lesson_screen_has_copy_binding() -> None:
+def test_lesson_screen_no_copy_binding() -> None:
     keys = [b.key for b in LessonScreen.BINDINGS]
-    assert "y" in keys
+    assert "y" not in keys
