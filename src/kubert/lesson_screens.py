@@ -7,6 +7,7 @@ from textual.widgets import Footer, Header, Label, ListItem, ListView, Markdown,
 from kubert import cluster, clipboard
 from kubert.checker import run_check
 from kubert.lesson import discover_lessons, get_default_lessons_root
+from kubert.markdown_blocks import extract_code_blocks, preview
 from kubert.models import Lesson, ManualCheck
 from kubert.state import load_progress, save_progress
 
@@ -130,13 +131,23 @@ class LessonScreen(Screen[None]):
     def action_do_copy_task(self) -> None:
         log = self.query_one("#output", RichLog)
         text = self.lesson.task if not isinstance(self.lesson.check, ManualCheck) else self.lesson.intro
+        blocks = extract_code_blocks(text)
+        if not blocks:
+            self._copy_and_report(text, log, label="text")
+            return
+        if len(blocks) == 1:
+            self._copy_and_report(blocks[0], log, label="code block")
+            return
+        self.app.push_screen(CodeBlockPickerScreen(blocks))
+
+    def _copy_and_report(self, text: str, log: "RichLog", label: str) -> None:
         tool = clipboard.copy(text)
         if tool is not None:
-            log.write(f"[green]Task copied to clipboard (via {tool}).[/green]")
-            self.app.notify("Task copied to clipboard.", severity="information")
+            log.write(f"[green]Copied {label} to clipboard (via {tool}).[/green]")
+            self.app.notify(f"Copied {label}.", severity="information")
             return
         self.app.copy_to_clipboard(text)
-        log.write("[yellow]No clipboard tool. Tried OSC 52 escape (works on some terminals).[/yellow]")
+        log.write("[yellow]No clipboard tool. Tried OSC 52 escape.[/yellow]")
         self.app.notify("Tried OSC 52 clipboard copy.", severity="warning")
 
     def action_do_next(self) -> None:
@@ -155,3 +166,40 @@ class LessonScreen(Screen[None]):
         if self.lesson.id not in p.completed_lessons:
             p.completed_lessons.append(self.lesson.id)
         save_progress(p)
+
+
+class CodeBlockItem(ListItem):
+    def __init__(self, index: int, block: str) -> None:
+        super().__init__(Label(f"{index + 1}. {preview(block)}", markup=False))
+        self.block = block
+
+
+class CodeBlockPickerScreen(Screen[None]):
+    BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
+    CSS = """
+    Screen { align: center middle; }
+    #cb-title { margin: 1 0; text-align: center; }
+    ListView { width: 80%; height: 60%; border: round $accent; padding: 0 1; }
+    """
+
+    def __init__(self, blocks: list[str]) -> None:
+        super().__init__()
+        self.blocks = blocks
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Static("Pick a code block to copy", id="cb-title")
+        yield ListView(
+            *[CodeBlockItem(i, b) for i, b in enumerate(self.blocks)],
+            id="cb-list",
+        )
+        yield Footer()
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if isinstance(event.item, CodeBlockItem):
+            tool = clipboard.copy(event.item.block)
+            msg = f"Copied block via {tool}." if tool else "Tried OSC 52 clipboard copy."
+            if tool is None:
+                self.app.copy_to_clipboard(event.item.block)
+            self.app.pop_screen()
+            self.app.notify(msg, severity="information" if tool else "warning")
