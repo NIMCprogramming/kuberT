@@ -52,6 +52,11 @@ def test_command_check_loads() -> None:
     )
 
 
+def test_every_lesson_has_cheat_notes() -> None:
+    for lesson in discover_lessons(LESSONS_ROOT):
+        assert lesson.cheat.strip(), f"lesson {lesson.id} has empty cheat"
+
+
 def test_pods_lesson_declares_cluster_requirement() -> None:
     lessons = discover_lessons(LESSONS_ROOT)
     pods = next(lesson for lesson in lessons if lesson.id.endswith("pods"))

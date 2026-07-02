@@ -30,5 +30,13 @@ intro: |
   This lesson is for reading only.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Save CPU and memory
+  - **Measure first** — install `metrics-server`, then `kubectl top pod` / `kubectl top node`.
+  - **Right-size** — requests near real usage, small buffer.
+  - Use **HPA** to add/remove Pods on load (module 12).
+  - Use **LimitRange** so no Pod is created without requests.
+  - Kill zombie test resources: `kubectl get all -A`.
+  - Prefer small base images: **Alpine**, **distroless**.
 check:
   type: manual

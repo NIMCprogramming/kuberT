@@ -98,6 +98,34 @@ hint: |
   - Check bind status: `kubectl get pvc work` → STATUS Bound.
   - See the auto-created PV: `kubectl get pvc work -o jsonpath='{.spec.volumeName}'`.
 requires: [cluster]
+cheat: |
+  ### Volumes and PVCs
+  - **Volume** = folder outside the container's writable layer.
+  - Types: `emptyDir` (temp), `hostPath` (rare), `persistentVolumeClaim` (real disk).
+
+  **Access modes:** `ReadWriteOnce` (RWO), `ReadOnlyMany` (ROX), `ReadWriteMany` (RWX).
+
+  **PVC YAML:**
+  ```yaml
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata: { name: NAME }
+  spec:
+    accessModes: [ReadWriteOnce]
+    resources: { requests: { storage: 1Gi } }
+    # storageClassName: standard
+  ```
+
+  **Use it in a Pod:**
+  ```yaml
+  spec:
+    containers:
+      - { name: c, image: IMG, volumeMounts: [{ name: v, mountPath: /data }] }
+    volumes:
+      - { name: v, persistentVolumeClaim: { claimName: NAME } }
+  ```
+
+  Check bind: `kubectl get pvc NAME` → STATUS Bound.
 check:
   type: multiple
   checks:

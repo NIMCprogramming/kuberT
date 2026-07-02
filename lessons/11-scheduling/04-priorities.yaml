@@ -29,5 +29,27 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Pod priority and preemption
+  ```yaml
+  apiVersion: scheduling.k8s.io/v1
+  kind: PriorityClass
+  metadata: { name: high-prio }
+  value: 1000
+  globalDefault: false
+  description: "Critical services"
+  ```
+
+  In a Pod:
+  ```yaml
+  spec:
+    priorityClassName: high-prio
+  ```
+
+  Built-in classes (do not touch):
+  - `system-cluster-critical`
+  - `system-node-critical`
+
+  Higher priority Pods can **preempt** (evict) lower-priority Pods to fit.
 check:
   type: manual

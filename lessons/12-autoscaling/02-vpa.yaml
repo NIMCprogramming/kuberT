@@ -27,5 +27,12 @@ intro: |
   This lesson is for reading only.
 task: |
   No task. Press `c`.
+cheat: |
+  ### VPA
+  - Adjusts CPU/memory **requests** based on real usage.
+  - Not built-in — install from `kubernetes/autoscaler`.
+  - Modes: `Off` (only recommend), `Initial` (set at creation), `Auto` (re-create with new values).
+  - VPA usually **restarts Pods** to apply new sizes.
+  - Do NOT use VPA and HPA on the **same** metric (they fight). OK if HPA uses custom metrics.
 check:
   type: manual

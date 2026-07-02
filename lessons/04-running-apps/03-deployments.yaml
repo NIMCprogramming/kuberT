@@ -78,6 +78,18 @@ hint: |
   - Roll back: `kubectl rollout undo deploy/api`
   - Check current image: `kubectl get deploy api -o jsonpath='{.spec.template.spec.containers[0].image}'`.
 requires: [cluster]
+cheat: |
+  ### Deployments
+  Chain: **Deployment → ReplicaSet → Pods**.
+
+  - `kubectl create deployment NAME --image=IMG --replicas=N`
+  - `kubectl scale deploy/NAME --replicas=M`
+  - `kubectl set image deploy/NAME CONTAINER=NEW_IMAGE`  — rolling update.
+  - `kubectl rollout status deploy/NAME`  — wait until done.
+  - `kubectl rollout history deploy/NAME`  — list revisions.
+  - `kubectl rollout undo deploy/NAME [--to-revision=N]`  — roll back.
+  - `kubectl delete deploy NAME`  — remove.
+  - Container name after `kubectl create deployment IMG`: it is `IMG` (image without tag).
 check:
   type: multiple
   checks:

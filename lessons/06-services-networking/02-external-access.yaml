@@ -54,6 +54,20 @@ hint: |
   - Or edit the YAML: `kubectl edit svc shop-svc`, then change `type` and add `nodePort: 30080`.
   - Verify: `kubectl get svc shop-svc` (look at PORT(S) column) and `kubectl get svc shop-svc -o jsonpath='{.spec.ports[0].nodePort}'`.
 requires: [cluster]
+cheat: |
+  ### NodePort
+  - Same port opened on **every** node. Range 30000–32767 by default.
+  - Reach from outside: `NODE_IP:NODE_PORT`.
+  - Change existing Service type:
+    ```
+    kubectl patch svc NAME -p '{"spec":{"type":"NodePort"}}'
+    ```
+  - Pin a specific node port (must also give `port` + `targetPort`):
+    ```
+    kubectl patch svc NAME -p '{"spec":{"type":"NodePort","ports":[{"port":8080,"targetPort":80,"nodePort":30080}]}}'
+    ```
+  - Read node port: `kubectl get svc NAME -o jsonpath='{.spec.ports[0].nodePort}'`.
+  - On `kind`, node runs inside Docker — external reach needs `extraPortMappings` in the kind config.
 check:
   type: multiple
   checks:

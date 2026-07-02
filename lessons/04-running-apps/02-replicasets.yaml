@@ -66,6 +66,14 @@ hint: |
   - Delete one Pod: `kubectl delete pod <one-of-the-names>`.
   - Watch new one appear: `kubectl get pods -l app=api -w` (Ctrl+C to stop).
 requires: [cluster]
+cheat: |
+  ### ReplicaSets
+  - Keeps a fixed number of Pods alive.
+  - You almost never make one by hand — a **Deployment** makes it for you.
+  - Three fields: `replicas`, `selector.matchLabels`, `template`.
+  - `template.metadata.labels` **must include** every `selector.matchLabels`.
+  - `kubectl get rs`  — list.
+  - `kubectl delete pod <name>`  — see self-heal (new Pod appears with fresh name).
 check:
   type: multiple
   checks:

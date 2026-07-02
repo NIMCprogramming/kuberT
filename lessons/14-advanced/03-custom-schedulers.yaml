@@ -29,5 +29,15 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Custom schedulers
+  - Tweak default: **scheduler profiles** in `KubeSchedulerConfiguration`.
+  - Run a **second scheduler** side by side; Pods pick with `spec.schedulerName`.
+  - Fully custom scheduler — rare, for HPC / ML / batch.
+
+  Batch-focused projects:
+  - **Volcano** — batch, gang scheduling, ML.
+  - **Kueue** — queueing on top of default scheduler.
+  - **Yunikorn** — big-data / Spark.
 check:
   type: manual

@@ -38,6 +38,13 @@ hint: |
   - Question 3: `kubectl config current-context` — the current context is a link between kubectl and one cluster.
   - If cluster-info hangs or fails, from the main menu pick "Check tools / create cluster".
 requires: [cluster]
+cheat: |
+  ### kind (Kubernetes IN Docker)
+  - `kind create cluster --name NAME`  — make a new cluster.
+  - `kind get clusters`  — list local kind clusters.
+  - `kind delete cluster --name NAME`  — remove.
+  - `kubectl cluster-info`  — is the cluster reachable?
+  - `kubectl config current-context`  — which cluster kubectl is pointing at.
 check:
   type: command
   cmd: "kubectl cluster-info"

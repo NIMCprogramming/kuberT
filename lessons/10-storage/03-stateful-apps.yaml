@@ -89,6 +89,14 @@ hint: |
   - Wait for the new Pod: `kubectl wait --for=condition=Ready pod/store-0 --timeout=120s`.
   - See the PVC attached to a Pod: `kubectl get pod store-0 -o jsonpath='{.spec.volumes[0].persistentVolumeClaim.claimName}'`.
 requires: [cluster]
+cheat: |
+  ### Stateful apps
+  - Use a **StatefulSet** + **volumeClaimTemplates** for per-Pod disks.
+  - PVC name pattern: `<template-name>-<statefulset-name>-<index>`.
+  - Deleting a StatefulSet does **NOT** delete PVCs — remove them explicitly:
+    `kubectl delete pvc -l app=NAME`.
+  - Real DBs on K8s: use an **Operator** (Postgres, MySQL, MongoDB, Kafka) instead of writing everything by hand.
+  - Backups: **Velero** for cluster-level; DB-specific tools for consistent snapshots.
 check:
   type: multiple
   checks:

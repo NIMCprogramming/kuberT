@@ -59,6 +59,20 @@ hint: |
   - Test one call: run a tester Pod as shown in the intro, replacing TARGET with `shop-svc:8080` or the Pod IP (e.g. `10.244.0.5`).
   - Delete a Pod: `kubectl delete pod <name>`. The Deployment/ReplicaSet makes a new one with a fresh IP — this is why you use the Service name in real code.
 requires: [cluster]
+cheat: |
+  ### Pod-to-Pod networking
+  - Every Pod has its own IP; every Pod can reach every other by IP (no NAT).
+  - But always call by **Service name**, not Pod IP.
+  - DNS forms (Service `web` in namespace `default`):
+    - `web`
+    - `web.default`
+    - `web.default.svc.cluster.local`
+  - Tester Pod pattern:
+    ```
+    kubectl run t --rm -it --restart=Never --image=curlimages/curl -- \
+      curl -sv http://TARGET
+    ```
+  - Debug DNS: `kubectl run t --rm -it --restart=Never --image=busybox -- nslookup web`.
 check:
   type: command
   cmd: "kubectl get svc shop-svc -o jsonpath='{.spec.clusterIP}'"

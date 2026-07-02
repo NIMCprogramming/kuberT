@@ -73,6 +73,27 @@ hint: |
   - Check ready: `kubectl get pod checked -o jsonpath='{.status.containerStatuses[0].ready}'` should print `true`.
   - See the probes: `kubectl describe pod checked | grep -A3 -E 'Liveness|Readiness'`.
 requires: [cluster]
+cheat: |
+  ### Health probes
+  Three kinds:
+  - **livenessProbe** — fail → **restart container**.
+  - **readinessProbe** — fail → remove Pod from Service (no traffic).
+  - **startupProbe** — used during slow boot; pauses liveness.
+
+  **Probe types:** `httpGet` (URL 2xx/3xx), `tcpSocket` (TCP OK), `exec` (command exit 0).
+
+  **Common fields:**
+  ```yaml
+  readinessProbe:
+    httpGet: { path: /health, port: 8080 }
+    initialDelaySeconds: 0
+    periodSeconds:      10
+    timeoutSeconds:     1
+    failureThreshold:   3
+    successThreshold:   1
+  ```
+
+  Trap: a strict **livenessProbe** on a slow-boot app → restart loop. Use `startupProbe` for slow starts.
 check:
   type: multiple
   checks:

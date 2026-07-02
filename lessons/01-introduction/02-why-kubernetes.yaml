@@ -24,5 +24,11 @@ intro: |
   for them.
 task: |
   No task. Just read and press Enter.
+cheat: |
+  ### Why Kubernetes
+  - **Self-healing** — restarts crashed containers automatically.
+  - **Auto-scaling** — adds Pods on load, removes them when idle.
+  - **Portable** — same YAML on any cloud, on-prem, or laptop.
+  - Replaces hand-written scripts for restart/deploy/rollback.
 check:
   type: manual

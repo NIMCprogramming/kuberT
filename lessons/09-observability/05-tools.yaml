@@ -32,5 +32,14 @@ intro: |
   tracing when you have many services.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Observability tools
+  - **Logs:** Loki, Elasticsearch+Kibana, Fluent Bit / Fluentd (agents).
+  - **Metrics:** Prometheus, Grafana, Thanos/Cortex/Mimir (scale), metrics-server (small).
+  - **Traces:** OpenTelemetry, Jaeger, Grafana Tempo.
+  - **All-in-one SaaS:** Datadog, New Relic.
+  - **All-in-one FOSS:** Grafana LGTM stack (Loki + Grafana + Tempo + Mimir).
+
+  Start with logs + metrics. Add tracing when you have several services.
 check:
   type: manual

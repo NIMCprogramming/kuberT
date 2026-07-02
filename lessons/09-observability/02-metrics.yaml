@@ -28,5 +28,15 @@ intro: |
   install metrics-server later.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Metrics
+  - **metrics-server** — light, in-cluster, powers `kubectl top` and HPA.
+  - **Prometheus** — pull-based scraper + time-series DB. Query with **PromQL**.
+  - **Grafana** — dashboards for Prometheus (and many other stores).
+  - **kube-state-metrics** — exposes K8s object state as metrics.
+
+  Handy commands (need metrics-server):
+  - `kubectl top nodes`
+  - `kubectl top pod -A`
 check:
   type: manual

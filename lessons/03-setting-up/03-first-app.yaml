@@ -40,6 +40,15 @@ hint: |
   - Shell: `kubectl exec -it <name> -- sh`  (the `--` separates kubectl flags from the command).
   - Delete: `kubectl delete pod <name>`.
 requires: [cluster]
+cheat: |
+  ### Running a Pod fast
+  - `kubectl run NAME --image=IMAGE`  — one-off Pod.
+  - `kubectl run NAME --image=IMAGE --restart=Never`  — plain Pod (no Deployment shell around it).
+  - `kubectl run NAME --image=IMAGE --rm -it -- CMD`  — run once, delete on exit.
+  - `kubectl get pod NAME -o wide`  — IP + node.
+  - `kubectl logs NAME`  — stdout/stderr.
+  - `kubectl exec -it NAME -- sh`  — shell inside.
+  - `kubectl delete pod NAME`  — remove.
 check:
   type: command
   cmd: "kubectl get pod hello-web -o jsonpath='{.status.phase}'"

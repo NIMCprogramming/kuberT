@@ -87,6 +87,23 @@ task: |
   When you can see one default class, press `c`.
 hint: "kubectl describe storageclass standard  -- same info, nicer to read"
 requires: [cluster]
+cheat: |
+  ### StorageClasses & CSI
+  - **CSI** = Container Storage Interface. Standard plugin API.
+  - A **StorageClass** picks a CSI driver + parameters.
+
+  Key fields in a StorageClass:
+  - `provisioner`         — the CSI driver name.
+  - `parameters`          — driver-specific (disk type, replication, ...).
+  - `reclaimPolicy`       — `Delete` (destroy PV) or `Retain` (keep PV).
+  - `volumeBindingMode`   — `Immediate` or `WaitForFirstConsumer` (wait for a Pod).
+
+  **Commands:**
+  - `kubectl get storageclass`
+  - `kubectl get sc <name> -o yaml`
+  - Set a default class: annotation `storageclass.kubernetes.io/is-default-class: "true"`.
+
+  In a PVC pick a class with `spec.storageClassName: NAME`. Use `""` (empty) to match only pre-existing PVs (no dynamic provisioning).
 check:
   type: command
   cmd: "kubectl get storageclass -o jsonpath='{.items[?(@.metadata.annotations.storageclass\\.kubernetes\\.io/is-default-class==\"true\")].metadata.name}'"

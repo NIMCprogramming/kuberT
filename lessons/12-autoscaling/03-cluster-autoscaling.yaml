@@ -27,5 +27,13 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Cluster autoscaling
+  Adds/removes **nodes** (not Pods).
+
+  - **cluster-autoscaler** — reacts to `Pending` Pods; works with node groups on AWS/GCP/Azure.
+  - **Karpenter** — picks the best node type on the fly (Spot, ARM, ...). Popular on EKS.
+
+  Not available on `kind` (no cloud). On cloud, use with an HPA for full elasticity.
 check:
   type: manual

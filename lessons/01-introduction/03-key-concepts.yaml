@@ -26,5 +26,14 @@ intro: |
   You will use each of these in later lessons.
 task: |
   No task. Press Enter to finish.
+cheat: |
+  ### Words to know
+  - **Cluster** — a group of computers acting as one.
+  - **Node** — one computer in the cluster.
+  - **Pod** — smallest unit; wraps 1+ containers.
+  - **Container** — your app + its libs in one box.
+  - **Control plane** — the "brain" (API server, scheduler, ...).
+  - **kubectl** — the CLI you use to talk to the cluster.
+  - **YAML** — what you write; K8s does the rest.
 check:
   type: manual

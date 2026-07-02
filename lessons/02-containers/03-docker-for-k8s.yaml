@@ -46,6 +46,12 @@ hint: |
   - If Docker is not running on Ubuntu: `sudo systemctl start docker`.
   - Running containers: `docker ps`.
   - You should see a container named like `kubert-control-plane` (the kind node).
+cheat: |
+  ### Docker and K8s
+  - K8s does NOT need Docker to run — it uses a **container runtime**: `containerd` or `CRI-O`.
+  - You can still BUILD images with Docker (or `podman`, `buildah`).
+  - Common commands: `docker version`, `docker ps`, `docker images`, `docker build -t NAME .`, `docker push`.
+  - `kind` uses `containerd` inside its node container.
 check:
   type: command
   cmd: "docker version --format '{{.Server.Version}}'"

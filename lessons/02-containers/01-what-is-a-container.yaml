@@ -26,5 +26,11 @@ intro: |
   you must know what a container is.
 task: |
   No task. Just read. Press Enter.
+cheat: |
+  ### Containers
+  - A container packs app + libs + settings in one box.
+  - Same box runs the same anywhere Docker (or `containerd`) is installed.
+  - Fixes *"works on my machine"*.
+  - K8s runs **containers**, not VMs.
 check:
   type: manual

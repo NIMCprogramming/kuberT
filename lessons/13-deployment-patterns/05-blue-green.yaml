@@ -30,5 +30,14 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Blue-Green
+  - Two full copies: **blue** (live) and **green** (idle).
+  - Switch traffic by changing the Service's `selector`.
+  - Instant rollback: switch selector back.
+
+  Trade-off: 2x resources during the swap. Database schema changes are the hard part.
+
+  Argo Rollouts and Flagger also support blue-green.
 check:
   type: manual

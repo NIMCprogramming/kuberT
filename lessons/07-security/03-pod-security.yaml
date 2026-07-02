@@ -27,5 +27,24 @@ intro: |
   these settings.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Pod security
+  Add to `spec.containers[*].securityContext`:
+  ```yaml
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+      # add: ["NET_BIND_SERVICE"]     # only if truly needed
+  ```
+  - Never set `privileged: true` unless you know why.
+  - **Pod Security Admission** enforces a level per namespace:
+    ```
+    kubectl label ns NS pod-security.kubernetes.io/enforce=restricted
+    ```
+    Levels: `privileged`, `baseline`, `restricted`.
 check:
   type: manual

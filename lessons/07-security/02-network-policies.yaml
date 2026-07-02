@@ -22,5 +22,24 @@ intro: |
   lesson is for reading only.
 task: |
   No task. Press `c` to mark as read.
+cheat: |
+  ### NetworkPolicies
+  - Firewall for Pods. Default: all-to-all is allowed.
+  - Needs a **CNI plugin** that enforces policies (Calico, Cilium).
+  - `kind`'s default CNI does **not** enforce them.
+  - YAML sketch (deny-all ingress in namespace):
+    ```yaml
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    spec:
+      podSelector: {}
+      policyTypes: [Ingress]
+    ```
+  - Allow only Pods with a specific label:
+    ```yaml
+    ingress:
+      - from:
+          - podSelector: { matchLabels: { role: frontend } }
+    ```
 check:
   type: manual

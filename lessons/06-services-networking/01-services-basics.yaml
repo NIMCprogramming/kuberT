@@ -91,6 +91,32 @@ hint: |
   - For the Service: `--port` is the SERVICE port (what clients dial), `--target-port` is the container port (where nginx listens). They are different in this task.
   - Endpoints appear only when the Pods are Ready. If you see `<none>`, wait a few seconds or check `kubectl get pods -l app=shop`.
 requires: [cluster]
+cheat: |
+  ### Services
+  Stable IP + DNS name in front of a group of Pods (picked by label).
+
+  **Types:**
+  - `ClusterIP` (default) — inside cluster only.
+  - `NodePort` — opens a port on every node.
+  - `LoadBalancer` — cloud gives a public IP.
+  - Headless (`clusterIP: None`) — no cluster IP; DNS returns Pod IPs.
+
+  **Commands:**
+  - `kubectl expose deployment NAME --port=P --target-port=Q --name=SVC_NAME`
+  - `kubectl get svc` / `kubectl get endpoints NAME`
+  - `--port` = Service port (clients dial). `--target-port` = container port.
+
+  **YAML:**
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata: { name: NAME }
+  spec:
+    type: ClusterIP
+    selector: { app: MYAPP }
+    ports:
+      - { port: 8080, targetPort: 80, protocol: TCP }
+  ```
 check:
   type: multiple
   checks:

@@ -29,5 +29,25 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Evictions
+  Reasons Kubernetes evicts a Pod:
+  1. **Node pressure** — low memory or disk on the node.
+  2. **API eviction** — `kubectl drain NODE` (before reboot).
+  3. **Preemption** — higher-priority Pod needs room.
+  4. **`NoExecute` taint** — running Pod without matching toleration is removed.
+
+  Protect with a **PodDisruptionBudget (PDB):**
+  ```yaml
+  apiVersion: policy/v1
+  kind: PodDisruptionBudget
+  spec:
+    minAvailable: 2               # or maxUnavailable: 1
+    selector: { matchLabels: { app: web } }
+  ```
+
+  Common commands:
+  - `kubectl drain NODE --ignore-daemonsets --delete-emptydir-data`
+  - `kubectl uncordon NODE`
 check:
   type: manual

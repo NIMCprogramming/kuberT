@@ -25,5 +25,13 @@ intro: |
   The trade-off: Kubernetes is more work to learn.
 task: |
   No task. Press Enter.
+cheat: |
+  ### Other orchestrators
+  - **Docker Swarm** — simplest, fewer features.
+  - **Nomad** (HashiCorp) — runs containers, VMs, and plain binaries.
+  - **Amazon ECS** — AWS-only.
+  - **Cloud Foundry** — older, app-focused.
+
+  K8s wins on ecosystem: works on every cloud, huge community, many add-ons (Helm, Prometheus, Istio).
 check:
   type: manual

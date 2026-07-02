@@ -31,5 +31,17 @@ intro: |
   `overlays/prod`) and use **Kustomize** or **Helm**.
 task: |
   No task. Press `c`.
+cheat: |
+  ### GitOps
+  - Git = single source of truth for what runs in the cluster.
+  - You do NOT `kubectl apply` by hand.
+  - An in-cluster agent watches Git and applies changes.
+  - Rollback = revert a commit.
+
+  Tools:
+  - **Argo CD** — web UI, ApplicationSets for multi-cluster.
+  - **Flux** — CLI-first, Kustomize/Helm friendly.
+
+  Common layout: `base/` + `overlays/dev`, `overlays/prod` (Kustomize) or Helm charts + values files per env.
 check:
   type: manual

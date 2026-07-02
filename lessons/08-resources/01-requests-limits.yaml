@@ -74,6 +74,23 @@ hint: |
     `kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources.limits.memory}'`
   - Reader-friendly view: `kubectl describe pod sizer` and look at the Requests/Limits section.
 requires: [cluster]
+cheat: |
+  ### Requests and Limits
+  - **Request** = min guaranteed. Scheduler uses it to place the Pod.
+  - **Limit**   = max allowed. Above CPU limit → throttle. Above memory limit → OOMKilled.
+
+  **Units:**
+  - CPU: `1`, `500m` (= 0.5 core), `100m` (= 0.1 core).
+  - Memory: `Mi`, `Gi` (base-1024, preferred).
+
+  **YAML:**
+  ```yaml
+  resources:
+    requests: { cpu: 100m, memory: 64Mi }
+    limits:   { cpu: 300m, memory: 128Mi }
+  ```
+
+  Advice: always set requests. Set limits above the peak, not tight.
 check:
   type: multiple
   checks:

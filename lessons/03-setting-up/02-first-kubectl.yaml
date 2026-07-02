@@ -68,6 +68,23 @@ hint: |
   - Question 2 and 3: `kubectl get nodes -o wide`, or `kubectl describe node <name>`.
   - Question 4: `kubectl get pods -A` (or `--all-namespaces`).
 requires: [cluster]
+cheat: |
+  ### kubectl basics
+  Shape: `kubectl <verb> <resource> [name] [flags]`
+
+  **Verbs:** `get`, `describe`, `create`, `apply`, `delete`, `logs`, `exec`, `edit`, `patch`, `scale`, `rollout`.
+
+  **Short names:** `po` (pods), `no` (nodes), `svc` (services), `deploy` (deployments), `cm` (configmaps), `rs` (replicasets), `sts` (statefulsets), `pvc` (persistentvolumeclaims), `ns` (namespaces).
+
+  **Flags:**
+  - `-n NS`  — namespace
+  - `-A`     — all namespaces
+  - `-o wide|yaml|json|name`  — output format
+  - `-l KEY=VAL`  — label filter
+  - `-w`     — watch (stream updates)
+  - `--dry-run=client -o yaml`  — print YAML without applying
+
+  `kubectl api-resources` lists everything.
 check:
   type: command
   cmd: "kubectl get nodes --no-headers"

@@ -60,6 +60,21 @@ hint: |
   - After a Pod restart, `--previous` reads the OLD container:
     `kubectl logs <pod-name> --previous`.
 requires: [cluster]
+cheat: |
+  ### Logs
+  Targets: `POD_NAME`, `deploy/NAME`, `job/NAME`.
+
+  **Flags:**
+  - `-f`                  — follow (stream).
+  - `--previous`          — logs from the crashed previous container.
+  - `-c CONTAINER`        — pick a container in a multi-container Pod.
+  - `--tail=N`            — last N lines.
+  - `--since=5m`          — recent only.
+  - `--all-containers`    — every container in the Pod.
+  - `--timestamps`        — add a timestamp per line.
+  - `-l app=X --all-namespaces` — logs from multiple Pods.
+
+  Container logs live at `/var/log/containers/...` on the node.
 check:
   type: multiple
   checks:

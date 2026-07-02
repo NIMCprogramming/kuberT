@@ -80,6 +80,22 @@ hint: |
   - Fields to fill: `metadata.name`, `metadata.labels`, `spec.containers[0].image`, `spec.containers[0].ports[0].containerPort`.
   - Verify labels: `kubectl get pod hello --show-labels`.
 requires: [cluster]
+cheat: |
+  ### Pods
+  - Smallest unit. Runs 1+ containers that share IP and volumes.
+  - **Imperative:** `kubectl run NAME --image=IMAGE [--restart=Never]`
+  - **Declarative:**
+    ```yaml
+    apiVersion: v1
+    kind: Pod
+    metadata: { name: NAME, labels: { app: NAME } }
+    spec:
+      containers:
+        - { name: c, image: IMAGE, ports: [{ containerPort: 80 }] }
+    ```
+  - `kubectl get pod NAME -o wide`  — IP + node.
+  - `kubectl logs NAME` / `kubectl exec -it NAME -- sh`.
+  - `kubectl get pods -l app=NAME`  — filter by label.
 check:
   type: multiple
   checks:

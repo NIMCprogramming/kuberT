@@ -26,5 +26,23 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Topology spread constraints
+  Spread Pods across zones/nodes to survive failures.
+
+  ```yaml
+  spec:
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule    # or ScheduleAnyway
+        labelSelector:
+          matchLabels: { app: web }
+  ```
+
+  Common topology keys:
+  - `topology.kubernetes.io/zone`
+  - `topology.kubernetes.io/region`
+  - `kubernetes.io/hostname`
 check:
   type: manual

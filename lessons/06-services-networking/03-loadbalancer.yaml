@@ -31,5 +31,24 @@ intro: |
   clusters, use Ingress.
 task: |
   No task. Just read. Press `c`.
+cheat: |
+  ### LoadBalancer and Ingress
+  - `type: LoadBalancer` — asks the **cloud** for a public IP.
+  - On laptop clusters (`kind`, `minikube`) the Service stays `<pending>` — no cloud provider.
+  - **Ingress** — one public IP, many hostnames/paths → many Services. Uses an **Ingress controller** (nginx-ingress, Traefik) running as Pods.
+  - Ingress YAML sketch:
+    ```yaml
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    spec:
+      rules:
+        - host: shop.example.com
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend: { service: { name: shop, port: { number: 8080 } } }
+    ```
+  - For local Ingress on kind: install `ingress-nginx` and start kind with `extraPortMappings` for 80/443.
 check:
   type: manual

@@ -28,5 +28,12 @@ intro: |
   Tracing is a big topic. This lesson only introduces the idea.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Tracing
+  - A **trace** follows one request across many services.
+  - Each step is a **span**. Spans build a timeline.
+  - **OpenTelemetry (OTel)** — the standard SDK / protocol.
+  - Storage/UI: **Jaeger**, **Grafana Tempo**, Datadog, Honeycomb, ...
+  - Instrument your app; the OTel Collector forwards data to your backend.
 check:
   type: manual

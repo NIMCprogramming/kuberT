@@ -62,6 +62,14 @@ hint: |
   - Delete one: `kubectl delete pod cache-1`.
   - Watch it re-appear: `kubectl get pod cache-1 -w`.
 requires: [cluster]
+cheat: |
+  ### StatefulSets
+  - Like a Deployment, but Pod names are **stable and ordered**: `NAME-0, NAME-1, ...`.
+  - Extra fields vs Deployment: `serviceName:` and (later) `volumeClaimTemplates:`.
+  - Great for databases (Postgres, MySQL, Kafka).
+  - `kubectl get sts`  — short form.
+  - Delete Pod `NAME-0` — it comes back with the **same name**.
+  - Needs a **headless Service** (`clusterIP: None`) for DNS names to work.
 check:
   type: multiple
   checks:

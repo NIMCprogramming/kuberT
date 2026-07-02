@@ -39,6 +39,20 @@ task: |
   When you have looked at them, press `c`.
 hint: "kubectl label node <name> disk=ssd  -- add a label to a node"
 requires: [cluster]
+cheat: |
+  ### Scheduler basics
+  - Two steps: **filter** nodes, then **score** them.
+  - Ways to guide the scheduler:
+    - `nodeSelector: { key: val }` — simple.
+    - `affinity.nodeAffinity` — richer, `required` + `preferred`.
+    - `affinity.podAffinity` / `podAntiAffinity` — place near / away from other Pods.
+    - **Taints + tolerations** — repel by default, allow through with a toleration.
+
+  **Handy commands:**
+  - `kubectl get nodes --show-labels`
+  - `kubectl label node NAME KEY=VAL`  — add label.
+  - `kubectl label node NAME KEY-`     — remove label.
+  - `kubectl describe pod NAME | grep -A2 Events`  — see why a Pod is `Pending`.
 check:
   type: command
   cmd: "kubectl get nodes --no-headers"

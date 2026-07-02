@@ -28,5 +28,11 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Canary release
+  - Send **a small percent of traffic** to a new version first.
+  - Increase gradually if healthy; roll back if not.
+  - Naive way on K8s: 9 Pods of v1 + 1 Pod of v2 behind the same Service → ~10% traffic to v2.
+  - Better: **Argo Rollouts** or **Flagger** — auto step-up + auto-rollback based on metrics.
 check:
   type: manual

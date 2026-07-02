@@ -78,6 +78,35 @@ hint: |
   - Accepted Pod (with requests): use `--overrides` with a JSON that adds `resources.requests.cpu` and `resources.requests.memory`, or apply a YAML.
   - See usage: `kubectl describe resourcequota limits -n sandbox`.
 requires: [cluster]
+cheat: |
+  ### Namespaces and Quotas
+  **Namespace commands:**
+  - `kubectl create ns NAME`
+  - `kubectl get all -n NS`
+  - `kubectl config set-context --current --namespace=NS`  — change default.
+
+  **ResourceQuota** (YAML sketch):
+  ```yaml
+  spec:
+    hard:
+      pods:            "5"
+      services:        "3"
+      requests.cpu:    "500m"
+      requests.memory: 256Mi
+      limits.cpu:      "1"
+      limits.memory:   512Mi
+  ```
+
+  **LimitRange** — auto default request/limit for Pods in a namespace:
+  ```yaml
+  spec:
+    limits:
+      - type: Container
+        default:        { cpu: 200m, memory: 128Mi }
+        defaultRequest: { cpu: 100m, memory: 64Mi }
+  ```
+
+  Trap: with a CPU/memory quota, every Pod MUST set requests, or LimitRange must supply defaults.
 check:
   type: multiple
   checks:

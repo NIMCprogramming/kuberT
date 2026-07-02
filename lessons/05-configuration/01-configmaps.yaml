@@ -77,6 +77,29 @@ hint: |
   - Wrap the heredoc in `<<'EOF'` (with quotes) so `$GREETING` and `$LOG_LEVEL` do NOT get expanded before Kubernetes sees them.
   - Verify env from inside: `kubectl exec cm-user -- env | grep -E 'GREETING|LOG_LEVEL'`.
 requires: [cluster]
+cheat: |
+  ### ConfigMaps
+  - For **non-secret** settings: URLs, feature flags, config files.
+  - Create:
+    - `kubectl create configmap NAME --from-literal=KEY=VAL`
+    - `kubectl create configmap NAME --from-file=path/to/file`
+    - `kubectl create configmap NAME --from-env-file=vars.env`
+  - Wire into a Pod as env var:
+    ```yaml
+    env:
+      - name: MY_VAR
+        valueFrom:
+          configMapKeyRef: { name: NAME, key: KEY }
+    ```
+  - Wire as files (mount as a Volume):
+    ```yaml
+    volumes:
+      - name: v
+        configMap: { name: NAME }
+    volumeMounts:
+      - { name: v, mountPath: /etc/config }
+    ```
+  - `kubectl describe cm NAME`  — see all keys.
 check:
   type: multiple
   checks:

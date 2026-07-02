@@ -50,6 +50,25 @@ task: |
   When done, press `c`.
 hint: "The trailing '-' at the end of the command removes the taint. Don't forget it!"
 requires: [cluster]
+cheat: |
+  ### Taints and tolerations
+  **Effects:** `NoSchedule`, `PreferNoSchedule`, `NoExecute`.
+
+  **Add / remove a taint:**
+  - `kubectl taint node NODE key=value:NoSchedule`
+  - `kubectl taint node NODE key=value:NoSchedule-`   (trailing `-` removes)
+
+  **Toleration on a Pod:**
+  ```yaml
+  spec:
+    tolerations:
+      - key: "key"
+        operator: "Equal"
+        value: "value"
+        effect: "NoSchedule"
+  ```
+
+  Use case: reserve **GPU nodes** for ML Pods only. Control-plane node has a default `NoSchedule` taint so user Pods stay off it.
 check:
   type: command
   cmd: "kubectl get nodes --no-headers"

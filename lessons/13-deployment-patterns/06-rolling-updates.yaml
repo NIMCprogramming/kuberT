@@ -82,6 +82,27 @@ hint: |
   - Undo: `kubectl rollout undo deploy/ver`
   - Current image: `kubectl get deploy ver -o jsonpath='{.spec.template.spec.containers[0].image}'`
 requires: [cluster]
+cheat: |
+  ### Rolling updates
+  Default strategy on a Deployment. Knobs:
+  ```yaml
+  spec:
+    strategy:
+      type: RollingUpdate        # or "Recreate"
+      rollingUpdate:
+        maxSurge: 1              # or "25%"
+        maxUnavailable: 0        # or "25%"
+    revisionHistoryLimit: 10
+  ```
+
+  **Commands:**
+  - `kubectl set image deploy/N CONT=IMG`  — trigger update.
+  - `kubectl rollout status deploy/N`
+  - `kubectl rollout history deploy/N`
+  - `kubectl rollout undo deploy/N [--to-revision=K]`
+  - `kubectl rollout pause deploy/N` / `kubectl rollout resume deploy/N`.
+
+  Current image: `kubectl get deploy N -o jsonpath='{.spec.template.spec.containers[0].image}'`.
 check:
   type: multiple
   checks:

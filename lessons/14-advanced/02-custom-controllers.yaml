@@ -38,5 +38,17 @@ intro: |
   This lesson is for reading.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Controllers and Operators
+  - K8s = **reconcile loop**: watch → diff → act → repeat.
+  - Every built-in resource has a controller.
+  - **CRD + custom controller = Operator**.
+
+  Frameworks:
+  - **Kubebuilder** (Go, official-ish).
+  - **Operator SDK** (Red Hat).
+  - **KOPF** / **Metacontroller** (Python).
+
+  Popular Operators: cert-manager, prometheus-operator, postgres-operator (Zalando/Crunchy), strimzi (Kafka).
 check:
   type: manual

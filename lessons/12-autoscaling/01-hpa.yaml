@@ -81,6 +81,36 @@ hint: |
   - Check: `kubectl get hpa nginx-app` and `kubectl get deploy nginx-app`.
   - See the full HPA: `kubectl get hpa nginx-app -o yaml`.
 requires: [cluster]
+cheat: |
+  ### HPA
+  - Adds/removes Pods based on CPU (or custom metric).
+  - Target Pods **must** set `resources.requests.cpu`.
+  - Needs **metrics-server** (or Prometheus adapter) for readings.
+
+  **Imperative:**
+  ```
+  kubectl autoscale deployment NAME --min=N --max=M --cpu-percent=T
+  ```
+
+  **YAML (v2, richer):**
+  ```yaml
+  apiVersion: autoscaling/v2
+  kind: HorizontalPodAutoscaler
+  spec:
+    scaleTargetRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: NAME
+    minReplicas: N
+    maxReplicas: M
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target: { type: Utilization, averageUtilization: 60 }
+  ```
+
+  Check state: `kubectl get hpa`, `kubectl describe hpa NAME`.
 check:
   type: multiple
   checks:

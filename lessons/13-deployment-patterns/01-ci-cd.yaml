@@ -28,5 +28,19 @@ intro: |
   - **Spinnaker**, **Jenkins** — older push-based CD.
 task: |
   No task. Press `c`.
+cheat: |
+  ### CI / CD
+  - **CI** — build + test on every push.
+  - **CD** — deliver / deploy the artifact to a cluster.
+
+  Common flow:
+  1. Push code → CI runs tests → builds image → pushes to registry.
+  2. CD updates the Deployment image tag.
+  3. K8s does a rolling update.
+
+  Tools:
+  - **CI:** GitHub Actions, GitLab CI, CircleCI, Jenkins.
+  - **CD (pull-based):** Argo CD, Flux.
+  - **CD (push-based):** Jenkins, Spinnaker.
 check:
   type: manual

@@ -23,5 +23,11 @@ intro: |
   This lesson is only for reading. Press Enter when you finish.
 task: |
   No task. Just press Enter.
+cheat: |
+  ### What is Kubernetes?
+  - Runs many **containers** on many computers as one system.
+  - Nickname: **K8s** (K + 8 letters + s).
+  - Keeps apps alive, scales them, works the same on laptop or cloud.
+  - You describe **what** you want in YAML; K8s figures out **how**.
 check:
   type: manual

@@ -32,5 +32,23 @@ intro: |
   in this environment by default.
 task: |
   No task. Press `c`.
+cheat: |
+  ### Helm
+  Package manager for K8s YAML.
+
+  **Concepts:** Chart, Repository, Release.
+
+  **Commands:**
+  - `helm repo add NAME URL`
+  - `helm repo update`
+  - `helm search repo NAME`
+  - `helm install RELEASE CHART`
+  - `helm install RELEASE CHART -f values.yaml --set key=val`
+  - `helm upgrade RELEASE CHART`
+  - `helm rollback RELEASE REVISION`
+  - `helm list`
+  - `helm uninstall RELEASE`
+
+  Chart layout: `Chart.yaml`, `values.yaml`, `templates/` (Go-template YAML).
 check:
   type: manual

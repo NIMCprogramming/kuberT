@@ -82,6 +82,26 @@ hint: |
   - Check "as": `kubectl auth can-i list services --as=system:serviceaccount:default:viewer`
   - See ALL allowed actions: `kubectl auth can-i --list --as=system:serviceaccount:default:viewer`
 requires: [cluster]
+cheat: |
+  ### RBAC
+  Four kinds:
+  - **Role** / **ClusterRole** — a list of allowed actions.
+  - **RoleBinding** / **ClusterRoleBinding** — link a Role to a subject.
+
+  **Subjects:** User, Group, ServiceAccount.
+
+  **Verbs:** `get, list, watch, create, update, patch, delete, deletecollection`.
+
+  **Commands:**
+  - `kubectl create sa NAME`
+  - `kubectl create role NAME --verb=... --resource=...`
+  - `kubectl create clusterrole NAME --verb=... --resource=...`
+  - `kubectl create rolebinding NAME --role=R --serviceaccount=NS:SA`
+  - `kubectl create clusterrolebinding NAME --clusterrole=R --serviceaccount=NS:SA`
+
+  **Test what an identity can do:**
+  - `kubectl auth can-i VERB RESOURCE --as=USER`
+  - `kubectl auth can-i --list --as=system:serviceaccount:NS:SA`
 check:
   type: multiple
   checks:

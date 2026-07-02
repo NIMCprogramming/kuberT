@@ -55,6 +55,15 @@ hint: |
   - Read logs: `kubectl logs job/sum`.
   - CronJob: `kubectl create cronjob beep --image=busybox --schedule="*/1 * * * *" -- echo beep`.
 requires: [cluster]
+cheat: |
+  ### Jobs and CronJobs
+  - **Job** — runs Pods until they succeed once (exit 0), then stops.
+  - **CronJob** — Job on a schedule (cron syntax).
+  - `kubectl create job NAME --image=IMG -- CMD ARGS`
+  - `kubectl create cronjob NAME --image=IMG --schedule="*/1 * * * *" -- CMD`
+  - `kubectl logs job/NAME`  — read Pod logs via the Job.
+  - `.status.succeeded` = how many completions so far.
+  - Retry count: `.spec.backoffLimit` (default 6).
 check:
   type: multiple
   checks:

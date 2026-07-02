@@ -30,5 +30,15 @@ intro: |
   little memory. So you can run many of them at once.
 task: |
   No task. Press Enter.
+cheat: |
+  ### Container vs VM
+  | | VM | Container |
+  |-|-|-|
+  | starts in | seconds–minutes | ~1 second |
+  | size | GB | MB |
+  | OS | full guest OS | shares host kernel |
+  | isolation | very strong | weaker (still enough) |
+
+  - VM = whole house. Container = one room in a shared house.
 check:
   type: manual

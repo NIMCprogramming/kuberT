@@ -31,5 +31,18 @@ intro: |
   so you know where to look next.
 task: |
   No task. Press `c`. Congratulations — you finished the roadmap!
+cheat: |
+  ### Multi-cluster
+  Why many clusters: regions, environments, blast-radius.
+
+  - **Cluster API (CAPI)** — manage clusters as K8s objects.
+  - **Karmada / Open Cluster Management / Fleet** — one control plane over many clusters.
+  - **Istio / Cilium Cluster Mesh** — Services across clusters.
+  - **Argo CD ApplicationSets** — deploy the same app to N clusters.
+
+  Handy commands:
+  - `kubectl config get-contexts`
+  - `kubectl config use-context NAME`
+  - `kubectl --context NAME ...`  — one-shot switch.
 check:
   type: manual
