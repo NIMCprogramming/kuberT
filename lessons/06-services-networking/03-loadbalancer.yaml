@@ -1,54 +1,184 @@
 id: 06-services-networking/03-loadbalancer
-title: "LoadBalancer and Ingress"
+title: "LoadBalancer and Ingress (with Traefik)"
 module: services-networking
 order: 3
-estimated_minutes: 6
+estimated_minutes: 25
 intro: |
-  # LoadBalancer
+  # LoadBalancer and Ingress
 
-  A **LoadBalancer** Service asks the cloud (AWS, GCP, Azure, ...)
-  for a **public IP address**. The cloud sends traffic from that
-  IP into your cluster.
-
-  Nice, but two problems for beginners:
-  - On a laptop cluster (`kind`, `minikube`), there is **no
-    cloud**. The Service stays in `<pending>` forever.
-  - Each LoadBalancer Service = one public IP. If you have 20 apps,
-    that is 20 IPs — and often 20 bills.
+  A **LoadBalancer** Service asks the cloud (AWS/GCP/Azure) for a
+  **public IP**. On a laptop cluster (`kind`, `minikube`), there
+  is no cloud — the Service stays `<pending>` forever. That is
+  why we usually use an **Ingress** on local clusters.
 
   ## Ingress
 
-  An **Ingress** is smarter. One public IP, many apps. The Ingress
-  looks at the URL:
-  - `shop.example.com` → the shop Service
-  - `api.example.com`  → the API Service
+  An **Ingress** is smarter than one LoadBalancer per app:
+  - One entry point (one IP or one hostname).
+  - Routes traffic by **host** or **path** to different Services.
 
-  You need an **Ingress controller** running in the cluster to make
-  Ingress work (nginx-ingress, Traefik, ...). On `kind` you can
-  install one, but this lesson is only for reading.
+  An Ingress **resource** by itself does nothing. You need an
+  **Ingress controller** running inside the cluster to make it
+  work. Popular controllers:
+  - **Traefik** (this lesson).
+  - **ingress-nginx**.
+  - **HAProxy Ingress**, **Contour**, ...
 
-  **Take-away:** for local learning, use NodePort. For real
-  clusters, use Ingress.
+  ## Traefik in one picture
+
+  ```
+  curl -H "Host: myshop.local" http://<traefik-pod>
+     │
+     └─ Traefik reads the Host header
+        └─ Finds an Ingress with rules for myshop.local
+           └─ Sends the request to the matching Service
+              └─ Service picks a Pod
+  ```
+
+  ## Example YAML (Ingress)
+
+  ```yaml
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: NAME
+    annotations:
+      kubernetes.io/ingress.class: traefik   # or set spec.ingressClassName
+  spec:
+    ingressClassName: traefik
+    rules:
+      - host: MYHOST
+        http:
+          paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: SVC_NAME
+                  port:
+                    number: SVC_PORT
+  ```
+
 task: |
-  No task. Just read. Press `c`.
+  **Your goal:** install Traefik, expose an app through it, and
+  reach the app by **hostname**.
+
+  ### Step 1 — install Traefik
+
+  The easy way (Helm):
+  ```
+  helm repo add traefik https://traefik.github.io/charts
+  helm repo update
+  helm install traefik traefik/traefik --namespace kube-system
+  ```
+
+  If you do not have Helm, install it once:
+  ```
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  ```
+
+  Wait until Traefik is Ready:
+  ```
+  kubectl -n kube-system get deploy traefik
+  kubectl -n kube-system rollout status deploy/traefik
+  ```
+
+  Confirm the IngressClass:
+  ```
+  kubectl get ingressclass
+  ```
+  You should see a class named **`traefik`**.
+
+  ### Step 2 — create your app
+
+  Requirements:
+  - Deployment **`webshop`**, image **`nginx`**, **2 replicas**.
+  - Service **`webshop`**, port **80**, target port **80**.
+
+  You built things like this in the earlier lessons — do it
+  yourself, no full command here.
+
+  ### Step 3 — create the Ingress
+
+  Requirements:
+  - Ingress named **`webshop`**.
+  - `ingressClassName: traefik`.
+  - Host: **`myshop.local`**.
+  - Path `/` (`pathType: Prefix`) → Service `webshop` on port `80`.
+
+  Apply the YAML.
+
+  ### Step 4 — call the Ingress by hostname
+
+  Two ways to test. Pick one.
+
+  **A) From inside the cluster (works everywhere):**
+  ```
+  kubectl -n kube-system port-forward svc/traefik 8080:80 &
+  curl -s -H "Host: myshop.local" -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/
+  kill %1
+  ```
+
+  **B) From a tester Pod (no port-forward):**
+  ```
+  kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
+    curl -s -o /dev/null -w "%{http_code}\n" \
+      -H "Host: myshop.local" http://traefik.kube-system/
+  ```
+
+  You should see `200`. Then press `c`.
+
+  ### Clean up later
+
+  ```
+  kubectl delete ingress webshop
+  kubectl delete svc webshop
+  kubectl delete deploy webshop
+  helm -n kube-system uninstall traefik   # or delete the manifest
+  ```
+hint: |
+  - Helm is a package manager for Kubernetes YAML. `helm install NAME CHART` installs a "release".
+  - After installing Traefik, look at the Service: `kubectl -n kube-system get svc traefik`. Its type is `LoadBalancer` — on kind it stays `<pending>` (no cloud), but the ClusterIP works, so port-forward or the tester Pod still work.
+  - Ingress YAML anchor: `spec.ingressClassName: traefik` AND `spec.rules[0].host: myshop.local`. Do not use the old annotation form.
+  - If curl returns `404`, the Host header does not match. Double-check the value inside `-H "Host: myshop.local"`.
+  - If the ingressclass is missing after install, wait a bit more, then `kubectl get ingressclass -A`.
+requires: [cluster]
 cheat: |
   ### LoadBalancer and Ingress
-  - `type: LoadBalancer` — asks the **cloud** for a public IP.
-  - On laptop clusters (`kind`, `minikube`) the Service stays `<pending>` — no cloud provider.
-  - **Ingress** — one public IP, many hostnames/paths → many Services. Uses an **Ingress controller** (nginx-ingress, Traefik) running as Pods.
+  - `type: LoadBalancer` — asks the **cloud** for a public IP. On kind: stays `<pending>`.
+  - **Ingress** — one entry point, many rules by host/path. Needs a **controller** (Traefik, ingress-nginx, ...).
+  - Install Traefik via Helm:
+    ```
+    helm repo add traefik https://traefik.github.io/charts
+    helm install traefik traefik/traefik -n kube-system
+    ```
   - Ingress YAML sketch:
     ```yaml
     apiVersion: networking.k8s.io/v1
     kind: Ingress
     spec:
+      ingressClassName: traefik
       rules:
-        - host: shop.example.com
+        - host: myshop.local
           http:
             paths:
               - path: /
                 pathType: Prefix
                 backend: { service: { name: shop, port: { number: 8080 } } }
     ```
-  - For local Ingress on kind: install `ingress-nginx` and start kind with `extraPortMappings` for 80/443.
+  - Test with `Host:` header:
+    `curl -H "Host: myshop.local" http://<traefik-ip>/`
+  - Local access on kind:
+    `kubectl -n kube-system port-forward svc/traefik 8080:80`
 check:
-  type: manual
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get ingressclass traefik -o jsonpath='{.metadata.name}'"
+      expect: "traefik"
+    - type: command
+      cmd: "kubectl get ingress webshop -o jsonpath='{.spec.rules[0].host}'"
+      expect: "myshop.local"
+    - type: command
+      cmd: "kubectl get svc webshop -o jsonpath='{.spec.ports[0].port}'"
+      expect: "80"
