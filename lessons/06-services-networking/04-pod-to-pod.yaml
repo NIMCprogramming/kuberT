@@ -6,7 +6,7 @@ estimated_minutes: 12
 intro: |
   # How Pods talk to each other
 
-  Inside a cluster, the rules are simple:
+  Inside a cluster:
   - Every Pod has its own IP.
   - Every Pod can reach every other Pod by IP, on any port.
   - No NAT between Pods.
@@ -16,69 +16,51 @@ intro: |
 
   ## DNS names inside the cluster
 
-  Kubernetes runs a small DNS server. When you make a Service
-  `web` in namespace `default`, three names work:
-
+  Three name forms work for a Service named `web` in namespace
+  `default`:
   ```
-  http://web                            # same namespace
-  http://web.default                    # any namespace, short form
-  http://web.default.svc.cluster.local  # long, always works
+  http://web                            # same namespace, short
+  http://web.default                    # any namespace, medium
+  http://web.default.svc.cluster.local  # fully-qualified, always works
   ```
 
-  For cross-namespace calls you need the second form (or the third).
+  For **cross-namespace** calls, use the second or third form.
 
   ## The tester Pod pattern
 
-  A very useful trick for debugging: start a Pod with `curl`
-  inside, run one command, and let it clean itself up:
+  A quick way to run one command from inside the cluster:
   ```
   kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
-    curl -sv http://web
+    curl -s -o /dev/null -w "%{http_code}\n" http://TARGET
   ```
-  - `--rm` — delete the Pod when it finishes.
-  - `-it` — attach an interactive terminal.
-  - `--restart=Never` — make a plain Pod (not a Deployment).
-  - `--image=curlimages/curl` — a tiny image with `curl` built in.
+  - `--rm` — delete the Pod when the command exits.
+  - `-it` — interactive terminal (attached).
+  - `--restart=Never` — plain Pod, not a Deployment.
+  - `--image=curlimages/curl` — a tiny image with `curl` inside.
   - Everything after `--` is the command to run.
 
 task: |
-  Two experiments — with the Service name, and with the Pod IP.
+  **Your goal:** call `shop-svc` (from earlier lessons) by name
+  and by IP from a temporary Pod.
 
-  ### Experiment 1 — call by Service name
-
-  You should already have a `web` Service. If not, run
-  `kubectl create deployment web --image=nginx --replicas=2` then
-  `kubectl expose deployment web --port=80 --target-port=80`.
-
-  ```
-  kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
-    curl -s -o /dev/null -w "%{http_code}\n" http://web
-  ```
-
-  You should see `200`.
-
-  ### Experiment 2 — call one Pod by IP
-
-  Get one Pod IP:
-  ```
-  kubectl get pod -l app=web -o wide
-  ```
-
-  Copy an IP (like `10.244.0.5`). Then:
-  ```
-  kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
-    curl -s -o /dev/null -w "%{http_code}\n" http://10.244.0.5
-  ```
-
-  Also `200`. This shows every Pod is reachable by IP. But if you
-  delete that Pod, the IP dies with it. That is why you use the
-  Service name in real code.
-
-  When both work, press `c`.
-hint: "If DNS fails: kubectl get svc web  -- and check ENDPOINTS are not empty"
+  Requirements:
+  1. `shop-svc` still exists (from lesson 01) with 3 Pods behind
+     it. If not, re-do that lesson first.
+  2. From a **tester Pod**, curl `http://shop-svc:8080`. HTTP
+     status must be **`200`**.
+  3. Get **one** Pod IP from `kubectl get pod -l app=shop -o wide`.
+     From a **tester Pod**, curl that IP directly on port 80. HTTP
+     status must be **`200`**.
+  4. Delete that specific Pod. Watch the Deployment start a new
+     one with a new IP.
+  5. Press `c`.
+hint: |
+  - Get Pod IPs: `kubectl get pod -l app=shop -o wide`.
+  - Test one call: run a tester Pod as shown in the intro, replacing TARGET with `shop-svc:8080` or the Pod IP (e.g. `10.244.0.5`).
+  - Delete a Pod: `kubectl delete pod <name>`. The Deployment/ReplicaSet makes a new one with a fresh IP — this is why you use the Service name in real code.
 requires: [cluster]
 check:
   type: command
-  cmd: "kubectl get svc web -o jsonpath='{.spec.clusterIP}'"
+  cmd: "kubectl get svc shop-svc -o jsonpath='{.spec.clusterIP}'"
   expect: "."
   timeout_seconds: 15

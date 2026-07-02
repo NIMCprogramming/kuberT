@@ -7,75 +7,59 @@ intro: |
   # NodePort
 
   A **ClusterIP** Service is only visible inside the cluster. To
-  let people outside the cluster reach your app, you need more.
+  let people outside reach your app, you need more.
 
   A **NodePort** Service opens **the same port on every node** in
-  the cluster. Someone outside can then call `NODE_IP:NODE_PORT`
-  and hit your app.
+  the cluster. Someone outside can call `NODE_IP:NODE_PORT` and
+  hit your app.
 
-  A NodePort works, but it is not pretty:
-  - The port is a big number, like `31234` (range 30000–32767 by
-    default).
+  A NodePort is not pretty:
+  - The port is a big number (range 30000–32767 by default).
   - You must know a node's IP.
 
   In real projects you often put an **Ingress** or a
   **LoadBalancer** in front. But NodePort is good to learn first.
 
-  ## Change an existing Service to NodePort
+  ## Two ways to change a Service to NodePort
 
-  You do not have to delete and re-make it. Use `kubectl patch`:
-  ```
-  kubectl patch svc web -p '{"spec":{"type":"NodePort"}}'
-  ```
-  - `patch svc web` — modify Service `web`.
-  - `-p '<json>'` — the JSON change (a partial update).
-  - `{"spec":{"type":"NodePort"}}` — only change `.spec.type`,
-    leave other fields alone.
+  **A) Recreate:** delete the ClusterIP Service and make it again
+  with `--type=NodePort`.
 
-  Kubernetes then picks a free node port for you automatically. You
-  can also set it by hand with `nodePort: 30080` in the YAML.
+  **B) In-place patch** (nicer — no downtime):
+  ```
+  kubectl patch svc NAME -p '{"spec":{"type":"NodePort"}}'
+  ```
+  - `patch svc NAME` — modify Service `NAME`.
+  - `-p '<json>'` — the change (a partial update).
+  - `{"spec":{"type":"NodePort"}}` — only change `.spec.type`.
+
+  Kubernetes picks a free node port automatically, or you can set
+  one in the YAML with `nodePort: 30080`.
 
 task: |
-  You will do three steps.
+  **Your goal:** turn your `shop-svc` Service from the last lesson
+  into a NodePort with a **specific** node port.
 
-  ### Step 1 — patch the Service to NodePort
+  Requirements:
+  1. You still have `shop-svc` from the previous lesson (if not,
+     re-do the previous lesson first).
+  2. Change its type to **`NodePort`**.
+  3. Its `nodePort` must be **`30080`**.
+  4. Its Service port stays **`8080`**, target port stays **`80`**.
 
-  ```
-  kubectl patch svc web -p '{"spec":{"type":"NodePort"}}'
-  ```
-
-  ### Step 2 — see the port
-
-  ```
-  kubectl get svc web
-  ```
-
-  Look at the `PORT(S)` column. You will see something like
-  `80:31234/TCP`. The `31234` is the node port.
-
-  Read only that number:
-  ```
-  kubectl get svc web -o jsonpath='{.spec.ports[0].nodePort}'
-  ```
-
-  ### Step 3 — call it (kind-specific note)
-
-  On a `kind` cluster, the node runs inside a Docker container.
-  You cannot reach `node-ip:31234` from the host easily. The
-  simplest test is still from **inside** the cluster:
-  ```
-  kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
-    curl -s -o /dev/null -w "%{http_code}\n" http://web
-  ```
-
-  You should see `200`. To reach a NodePort from your laptop on a
-  real cluster, you would use `curl <NODE_IP>:<NODE_PORT>`.
-
-  When Type is `NodePort`, press `c`.
-hint: "kubectl get svc web -o jsonpath='{.spec.ports[0].nodePort}'"
+  Then press `c`.
+hint: |
+  - You cannot set a specific `nodePort` with `kubectl patch svc ... type=NodePort` alone. Use a patch with both fields:
+    `kubectl patch svc shop-svc -p '{"spec":{"type":"NodePort","ports":[{"port":8080,"targetPort":80,"nodePort":30080}]}}'`
+  - Or edit the YAML: `kubectl edit svc shop-svc`, then change `type` and add `nodePort: 30080`.
+  - Verify: `kubectl get svc shop-svc` (look at PORT(S) column) and `kubectl get svc shop-svc -o jsonpath='{.spec.ports[0].nodePort}'`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get svc web -o jsonpath='{.spec.type}'"
-  expect: "NodePort"
-  timeout_seconds: 15
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get svc shop-svc -o jsonpath='{.spec.type}'"
+      expect: "NodePort"
+    - type: command
+      cmd: "kubectl get svc shop-svc -o jsonpath='{.spec.ports[0].nodePort}'"
+      expect: "30080"

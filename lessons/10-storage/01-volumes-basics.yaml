@@ -2,178 +2,110 @@ id: 10-storage/01-volumes-basics
 title: "Volumes basics"
 module: storage
 order: 1
-estimated_minutes: 15
+estimated_minutes: 18
 intro: |
   # Why volumes?
 
-  When a container stops, everything inside its filesystem is
-  **gone**. If your app writes files, you lose them on restart.
+  When a container stops, everything in its writable layer is
+  **gone**. If your app writes files, you lose them.
 
-  A **Volume** is a folder that lives outside the container's
-  writable layer. Two containers in the same Pod can share it.
-  Some Volume types also survive Pod deletion.
+  A **Volume** is a folder outside the container's writable
+  layer. Containers in the same Pod can share it.
 
   Common Volume types:
-  - **emptyDir** — an empty folder created when the Pod starts,
-    deleted when the Pod dies. Good for temp files.
-  - **hostPath** — a folder on the node. Rare, only for system
-    Pods.
+  - **emptyDir** — created when the Pod starts, deleted when the
+    Pod dies. Temp files.
   - **PersistentVolumeClaim (PVC)** — a request for real storage
     that survives Pod deletion. **This is the important one.**
 
-  ## PV vs PVC (the two-step model)
+  ## PV vs PVC
 
   - **PersistentVolume (PV)** — a piece of storage in the cluster.
-    Either an admin created it, or the cluster made it on demand
-    from a StorageClass (see next lesson).
+    Either an admin made it, or the cluster made it from a
+    StorageClass.
   - **PersistentVolumeClaim (PVC)** — the user's *request*: *"give
     me 1Gi of ReadWriteOnce storage"*.
 
   When you create a PVC, Kubernetes finds (or creates) a matching
-  PV and **binds** them. Then a Pod can mount the PVC.
+  PV and **binds** them.
 
-  ## Break the PVC YAML apart
+  ## PVC YAML shape
 
   ```yaml
   apiVersion: v1
   kind: PersistentVolumeClaim
   metadata:
-    name: data
-  spec:
-    accessModes: [ReadWriteOnce]   # ONE node can mount as read+write
-    resources:
-      requests:
-        storage: 100Mi             # I need at least 100 MiB
-    # storageClassName: standard   # optional: pick a class (else default)
-  ```
-
-  ## Access modes
-
-  - `ReadWriteOnce` (RWO) — one node can mount as read+write.
-    Most block storage (AWS EBS, GCP PD).
-  - `ReadOnlyMany` (ROX) — many nodes can mount, read-only.
-  - `ReadWriteMany` (RWX) — many nodes can mount read+write
-    (needs NFS-like storage).
-
-  ## How to use a PVC in a Pod
-
-  Two extra pieces:
-  1. In the Pod's `spec.volumes` — reference the PVC.
-  2. In the container's `volumeMounts` — mount it at a path.
-
-task: |
-  You will do three steps.
-
-  ### Step 1 — ask for storage
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    name: data
+    name: NAME
   spec:
     accessModes: [ReadWriteOnce]
     resources:
       requests:
         storage: 100Mi
-  EOF
+    # storageClassName: standard   # optional (else default)
   ```
 
-  ### Step 2 — wait for it to Bind
+  ## Access modes
 
-  ```
-  kubectl get pvc data
-  ```
+  - `ReadWriteOnce` (RWO) — one node mounts as read+write.
+  - `ReadOnlyMany` (ROX) — many nodes, read-only.
+  - `ReadWriteMany` (RWX) — many nodes, read+write (NFS-like).
 
-  Wait for STATUS `Bound`. Look at the auto-created PV name:
-  ```
-  kubectl get pvc data -o jsonpath='{.spec.volumeName}'
-  echo
-  ```
+  ## Wiring a PVC into a Pod
 
-  ### Step 3 — actually USE the PVC in a Pod
-
-  Mount the PVC as a folder inside the container. Write a file
-  from inside. Delete the Pod. Make a new Pod that mounts the
-  same PVC. Read the file. The data survives.
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: writer
+  ```yaml
   spec:
-    restartPolicy: Never
     containers:
       - name: c
-        image: busybox
-        command: ["sh", "-c", "echo hello-from-pod > /data/greeting.txt; sleep 3600"]
+        image: IMAGE
         volumeMounts:
           - name: v
             mountPath: /data
     volumes:
       - name: v
         persistentVolumeClaim:
-          claimName: data
-  EOF
+          claimName: PVC_NAME
   ```
 
-  Wait a few seconds, then confirm the file exists inside:
-  ```
-  kubectl exec writer -- cat /data/greeting.txt
-  ```
+task: |
+  **Your goal:** prove that a PVC keeps data across Pod restarts.
 
-  Delete the Pod, but keep the PVC:
-  ```
-  kubectl delete pod writer
-  ```
+  Requirements:
+  1. Create a PVC named **`work`** requesting **`200Mi`** with
+     access mode **`ReadWriteOnce`**.
+  2. Wait until STATUS is `Bound`.
+  3. Create a Pod named **`writer`** using image **`busybox`**:
+     - mount PVC `work` at path `/data`
+     - container command: write `saved-by-writer` into
+       `/data/note.txt`, then sleep forever
+     - `restartPolicy: Never`
+  4. Confirm the file exists inside: `kubectl exec writer -- cat /data/note.txt` should print `saved-by-writer`.
+  5. **Delete** the `writer` Pod (but not the PVC).
+  6. Create a **new** Pod named **`reader`** using image
+     **`busybox`**:
+     - mount the SAME PVC at `/data`
+     - container command: `cat /data/note.txt`, then sleep
+     - `restartPolicy: Never`
+  7. Read the reader's logs. They must contain `saved-by-writer`.
+  8. Press `c`.
 
-  Now start a **new** Pod that mounts the SAME PVC:
-  ```
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: reader
-  spec:
-    restartPolicy: Never
-    containers:
-      - name: c
-        image: busybox
-        command: ["sh", "-c", "cat /data/greeting.txt; sleep 3600"]
-        volumeMounts:
-          - name: v
-            mountPath: /data
-    volumes:
-      - name: v
-        persistentVolumeClaim:
-          claimName: data
-  EOF
-  ```
-
-  Read its logs:
-  ```
-  kubectl logs reader
-  ```
-
-  You should still see `hello-from-pod`. Then press `c`.
-
-  Clean up later:
-  ```
-  kubectl delete pod reader
-  kubectl delete pvc data
-  ```
-hint: "kubectl describe pvc data  -- see the bound PV, events, and access modes"
+  Clean up later: delete both Pods and the PVC.
+hint: |
+  - Container command for the writer:
+    `["sh", "-c", "echo saved-by-writer > /data/note.txt; sleep 3600"]`
+  - Container command for the reader:
+    `["sh", "-c", "cat /data/note.txt; sleep 3600"]`
+  - Use `<<'EOF'` for the heredoc.
+  - Check bind status: `kubectl get pvc work` → STATUS Bound.
+  - See the auto-created PV: `kubectl get pvc work -o jsonpath='{.spec.volumeName}'`.
 requires: [cluster]
 check:
   type: multiple
   checks:
     - type: command
-      cmd: "kubectl get pvc data -o jsonpath='{.status.phase}'"
+      cmd: "kubectl get pvc work -o jsonpath='{.status.phase}'"
       expect: "Bound"
+      timeout_seconds: 60
     - type: command
       cmd: "kubectl logs reader"
-      expect: "hello-from-pod"
+      expect: "saved-by-writer"
       timeout_seconds: 60

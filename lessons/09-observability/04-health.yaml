@@ -2,22 +2,19 @@ id: 09-observability/04-health
 title: "Probes: liveness, readiness, startup"
 module: observability
 order: 4
-estimated_minutes: 15
+estimated_minutes: 18
 intro: |
   # Health probes
 
   How does Kubernetes know if your app is alive? Probes.
 
-  Three types:
-
-  - **Liveness probe** — *"is the app still alive?"* If it fails
-    (many times in a row), Kubernetes **restarts the container**.
+  - **Liveness probe** — *"is the app still alive?"* Fail → the
+    container is **restarted**.
   - **Readiness probe** — *"is the app ready to serve traffic?"*
-    If it fails, the Pod is **removed from the Service** (no
-    traffic) but not restarted.
-  - **Startup probe** — *"has the app finished starting?"* Used
-    for slow-start apps. While the startup probe is running,
-    liveness is paused so a slow boot does not cause a restart.
+    Fail → the Pod is **removed from the Service** (no traffic),
+    but not restarted.
+  - **Startup probe** — *"has the app finished starting?"* While
+    it runs, liveness is paused. Use for slow-boot apps.
 
   ## Probe types
 
@@ -26,127 +23,67 @@ intro: |
   - `tcpSocket` — a port accepts a TCP connection.
   - `exec` — a command inside the container exits `0`.
 
-  ## Break the fields apart
+  ## Common fields
 
   ```yaml
   readinessProbe:
     httpGet:
       path: /
       port: 80
-    initialDelaySeconds: 0   # wait N seconds before the first probe
-    periodSeconds:      5    # run the probe every 5 seconds
-    timeoutSeconds:     1    # each probe must answer in 1 s
-    failureThreshold:   3    # need N failures in a row to fail
-    successThreshold:   1    # N successes in a row to pass
+    initialDelaySeconds: 0    # wait N sec before the first probe
+    periodSeconds:      5     # run the probe every 5 sec
+    timeoutSeconds:     1     # each probe must answer in 1 sec
+    failureThreshold:   3     # N failures in a row to fail
+    successThreshold:   1     # N successes to pass
   ```
 
-  **Good defaults:**
-  - Always add a readiness probe.
-  - Add a liveness probe if the app can **hang** (deadlock, stuck
-    thread).
-  - Use a startup probe for apps that take a long time to boot
-    (Java, big databases).
+  ## Warning
 
-  ## Warning about liveness
-
-  A too-strict liveness probe can cause **restart loops**. If your
-  app takes 30 s to start but the probe fails after 10 s,
+  A too-strict **liveness** probe can cause **restart loops**. If
+  your app boots in 30 s but the probe fails after 10 s,
   Kubernetes will restart it forever. Use a startup probe or a
-  higher `initialDelaySeconds` for that case.
+  higher `initialDelaySeconds`.
 
 task: |
-  You will do three steps.
+  **Your goal:** build a Pod with both a readiness probe (that
+  passes) and a liveness probe (that also passes).
 
-  ### Step 1 — make a Pod with a readiness probe
+  Requirements:
+  1. Create a Pod named **`checked`** with:
+     - one container, image **`nginx`**
+     - a **readinessProbe** using `httpGet` on `path: /` port
+       **`80`**, `periodSeconds: 5`
+     - a **livenessProbe** using `httpGet` on `path: /` port
+       **`80`**, `periodSeconds: 10`, `initialDelaySeconds: 3`
+  2. Wait until `ready` on the container is `true`.
+  3. Confirm STATUS is `Running`.
+  4. Press `c`.
 
-  ```
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: healthy
-  spec:
-    containers:
-      - name: c
-        image: nginx
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 80
-          periodSeconds: 5
-  EOF
-  ```
+  ## Bonus (optional)
 
-  ### Step 2 — watch it become Ready
+  Make a **second** Pod named `broken` with the same readiness
+  probe but on port `999`. It will never become Ready (`READY 0/1`).
+  See the event: `kubectl describe pod broken | grep -A2 Readiness`.
+  Then delete the broken Pod.
 
-  ```
-  kubectl get pod healthy -w
-  ```
-
-  READY goes from `0/1` to `1/1`. Press `Ctrl+C` to stop.
-
-  Read only the ready flag:
-  ```
-  kubectl get pod healthy -o jsonpath='{.status.containerStatuses[0].ready}'
-  echo
-  ```
-
-  Should print `true`.
-
-  ### Step 3 — see what a failed probe looks like (bonus)
-
-  Change the port to something wrong (`999`) — the probe will
-  fail forever and READY will stay `0/1`:
-  ```
-  kubectl delete pod healthy
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: healthy
-  spec:
-    containers:
-      - name: c
-        image: nginx
-        readinessProbe:
-          httpGet: { path: /, port: 999 }
-          periodSeconds: 3
-  EOF
-  ```
-
-  Look at the events:
-  ```
-  kubectl describe pod healthy | grep -A2 Readiness
-  ```
-
-  Then fix it (put the port back to `80`) so the check passes:
-  ```
-  kubectl delete pod healthy
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: healthy
-  spec:
-    containers:
-      - name: c
-        image: nginx
-        readinessProbe:
-          httpGet: { path: /, port: 80 }
-          periodSeconds: 5
-  EOF
-  ```
-
-  When ready, press `c`.
-
-  Clean up:
-  ```
-  kubectl delete pod healthy
-  ```
-hint: "kubectl describe pod healthy  -- see 'Readiness probe failed' events for the bad-port version"
+  Clean up later: delete `checked`.
+hint: |
+  - Use YAML with a heredoc. Add both probes under `spec.containers[0]`.
+  - `readinessProbe` and `livenessProbe` sit next to `image:` in the container spec.
+  - Check ready: `kubectl get pod checked -o jsonpath='{.status.containerStatuses[0].ready}'` should print `true`.
+  - See the probes: `kubectl describe pod checked | grep -A3 -E 'Liveness|Readiness'`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get pod healthy -o jsonpath='{.status.containerStatuses[0].ready}'"
-  expect: "true"
-  timeout_seconds: 60
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get pod checked -o jsonpath='{.status.phase}'"
+      expect: "Running"
+      timeout_seconds: 60
+    - type: command
+      cmd: "kubectl get pod checked -o jsonpath='{.status.containerStatuses[0].ready}'"
+      expect: "true"
+      timeout_seconds: 60
+    - type: command
+      cmd: "kubectl get pod checked -o jsonpath='{.spec.containers[0].livenessProbe.httpGet.port}'"
+      expect: "80"

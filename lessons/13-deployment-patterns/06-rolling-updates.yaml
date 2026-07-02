@@ -2,7 +2,7 @@ id: 13-deployment-patterns/06-rolling-updates
 title: "Rolling updates and rollbacks"
 module: deployment-patterns
 order: 6
-estimated_minutes: 15
+estimated_minutes: 18
 intro: |
   # Rolling update
 
@@ -17,113 +17,78 @@ intro: |
     during the roll.
 
   Both accept a number (`1`) or a percent (`25%`). Defaults: `25%`
-  and `25%`. For a Deployment with 4 replicas, Kubernetes may
-  keep 3 old + 1 new for a moment, then 2 + 2, then 1 + 3, then
-  0 + 4.
+  and `25%`.
 
   ## The YAML
 
   ```yaml
   spec:
     strategy:
-      type: RollingUpdate            # or "Recreate" for kill-all-then-start
+      type: RollingUpdate
       rollingUpdate:
         maxSurge: 1
-        maxUnavailable: 0            # zero-downtime, slower
+        maxUnavailable: 0     # zero-downtime, slower
+    ...
   ```
 
-  Setting `maxUnavailable: 0` means "never drop below the wanted
-  replica count". Best for critical apps, but a bit slower.
+  `type: Recreate` kills everything first, then starts new Pods.
+  Only for apps that cannot run two versions at once.
 
   ## Break the commands apart
 
   ```
-  kubectl set image deploy/web nginx=nginx:1.27
+  kubectl set image deploy/NAME CONTAINER=IMAGE
   ```
-  - `set image` — change the image of a container.
-  - `deploy/web` — the Deployment.
-  - `nginx=nginx:1.27` — set container **named `nginx`** to image
-    `nginx:1.27`. The name comes from `spec.template.spec.containers[i].name`.
+  - `set image` — change the container image.
+  - `deploy/NAME` — the Deployment (short form).
+  - `CONTAINER=IMAGE` — set container named `CONTAINER` to
+    `IMAGE`. The container name comes from
+    `spec.template.spec.containers[i].name`. When you use
+    `kubectl create deployment`, the container name is the image
+    name without the tag.
 
   ```
-  kubectl rollout status deploy/web        # wait until done
-  kubectl rollout history deploy/web       # list revisions
-  kubectl rollout undo deploy/web          # go back one revision
-  kubectl rollout undo deploy/web --to-revision=2   # go to a specific one
+  kubectl rollout status deploy/NAME             # wait until done
+  kubectl rollout history deploy/NAME            # list revisions
+  kubectl rollout undo deploy/NAME               # go back one
+  kubectl rollout undo deploy/NAME --to-revision=2
   ```
-
-  Rollback works because a Deployment keeps a few old ReplicaSets
-  around (`spec.revisionHistoryLimit`, default 10).
 
 task: |
-  You will do four steps.
+  **Your goal:** do a full "update, then roll back" flow with
+  clear proof at each step.
 
-  ### Step 1 — start on nginx:1.25
+  Requirements:
+  1. Create a Deployment named **`ver`** with **2 replicas**
+     starting on image **`nginx:1.24`**.
+  2. Wait until READY is `2/2`.
+  3. Update the image to **`nginx:1.26`**. Wait for the rollout
+     to finish. Confirm the current image is `nginx:1.26`.
+  4. Update the image again to **`nginx:1.27`**. Wait for the
+     rollout to finish. Confirm the current image is `nginx:1.27`.
+  5. Look at the rollout history — you should see **3 revisions**.
+  6. **Roll back** to the previous revision (should land on
+     `nginx:1.26`). Wait for the rollout to finish. Confirm the
+     current image is `nginx:1.26`.
+  7. Press `c`.
 
-  If you already have `web`, delete it first:
-  ```
-  kubectl delete deploy web --ignore-not-found
-  kubectl create deployment web --image=nginx:1.25 --replicas=2
-  kubectl rollout status deploy/web
-  ```
-
-  Confirm the image:
-  ```
-  kubectl get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'
-  echo
-  ```
-
-  ### Step 2 — update to nginx:1.27
-
-  ```
-  kubectl set image deploy/web nginx=nginx:1.27
-  kubectl rollout status deploy/web
-  ```
-
-  Watch new Pods appear and old Pods go. Confirm the image
-  changed:
-  ```
-  kubectl get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'
-  echo
-  ```
-
-  ### Step 3 — see the history and roll back
-
-  ```
-  kubectl rollout history deploy/web
-  kubectl rollout undo deploy/web
-  kubectl rollout status deploy/web
-  ```
-
-  Confirm you are back on `1.25`:
-  ```
-  kubectl get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'
-  echo
-  ```
-
-  ### Step 4 — go forward again
-
-  ```
-  kubectl set image deploy/web nginx=nginx:1.27
-  kubectl rollout status deploy/web
-  ```
-
-  When the image is `nginx:1.27` and the Deployment is ready,
-  press `c`.
-
-  Clean up later:
-  ```
-  kubectl delete deploy web
-  ```
-hint: "kubectl rollout history deploy/web --revision=2  -- see the change details of revision 2"
+  Clean up later: delete the Deployment.
+hint: |
+  - Create: `kubectl create deployment ver --image=nginx:1.24 --replicas=2`
+  - The container name after `kubectl create` is `nginx` (the image name without a tag).
+  - Update: `kubectl set image deploy/ver nginx=nginx:1.26`
+  - Wait: `kubectl rollout status deploy/ver`
+  - History: `kubectl rollout history deploy/ver`
+  - Undo: `kubectl rollout undo deploy/ver`
+  - Current image: `kubectl get deploy ver -o jsonpath='{.spec.template.spec.containers[0].image}'`
 requires: [cluster]
 check:
   type: multiple
   checks:
     - type: command
-      cmd: "kubectl get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'"
-      expect: "nginx:1.27"
-    - type: command
-      cmd: "kubectl get deploy web -o jsonpath='{.status.readyReplicas}'"
+      cmd: "kubectl get deploy ver -o jsonpath='{.status.readyReplicas}'"
       expect: "2"
       timeout_seconds: 120
+    - type: command
+      cmd: "kubectl get deploy ver -o jsonpath='{.spec.template.spec.containers[0].image}'"
+      expect: "nginx:1.26"

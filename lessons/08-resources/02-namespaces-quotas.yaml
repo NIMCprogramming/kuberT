@@ -2,25 +2,21 @@ id: 08-resources/02-namespaces-quotas
 title: "Namespaces and Quotas"
 module: resources
 order: 2
-estimated_minutes: 15
+estimated_minutes: 18
 intro: |
   # Namespaces
 
   A **Namespace** is a folder inside the cluster. It groups
   resources (Pods, Services, ConfigMaps, ...). Names must be
-  unique **inside** a namespace, but two namespaces can each have
-  a Pod called `web`.
+  unique inside a namespace.
 
   Common uses:
   - one namespace per team
   - one namespace per environment (`dev`, `stage`, `prod`)
 
-  A cluster always has:
-  - `default` — where things go if you do not pick another.
-  - `kube-system` — internal cluster components (do not touch).
-  - `kube-public` — public bootstrap data.
+  Every cluster has `default`, `kube-system`, `kube-public`.
 
-  ## kubectl in a namespace
+  ## Working in a namespace
 
   Most commands take `-n <namespace>`:
   ```
@@ -33,93 +29,61 @@ intro: |
   kubectl config set-context --current --namespace=demo
   ```
 
-  ## ResourceQuota — a spending limit
+  ## ResourceQuota — a spending cap
 
-  A **ResourceQuota** limits how much a namespace can use in total.
-  Example:
+  A **ResourceQuota** limits how much a namespace can use in
+  total.
 
   ```yaml
-  spec:
-    hard:                       # HARD limits (block create when reached)
-      pods:            "5"      # never more than 5 Pods
-      requests.cpu:    "500m"   # total requests across all Pods <= 500m
-      requests.memory: 256Mi
-  ```
-
-  **Important trap:** if a namespace has a ResourceQuota on CPU or
-  memory, then **every new Pod must set requests and limits**.
-  Otherwise `kubectl apply` fails with a message like:
-  *"must specify resources.requests.cpu"*.
-
-  A **LimitRange** solves this by giving every Pod a **default**
-  request/limit automatically.
-
-task: |
-  You will do four steps.
-
-  ### Step 1 — make a namespace
-
-  ```
-  kubectl create namespace demo
-  ```
-
-  ### Step 2 — put a ResourceQuota on it
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
   apiVersion: v1
   kind: ResourceQuota
   metadata:
-    name: q
-    namespace: demo
+    name: NAME
+    namespace: NS
   spec:
-    hard:
-      pods: "5"
-      requests.cpu: "500m"
+    hard:                       # HARD caps
+      pods:            "5"      # never more than 5 Pods
+      requests.cpu:    "500m"   # sum of Pod requests <= 500m
       requests.memory: 256Mi
-  EOF
+      services:        "3"      # up to 3 Services
   ```
 
-  See it:
-  ```
-  kubectl get resourcequota -n demo
-  kubectl describe resourcequota q -n demo
-  ```
+  **Big trap:** if a namespace has a ResourceQuota on CPU or
+  memory, then **every new Pod must set requests and limits**, or
+  the API refuses to create it.
 
-  ### Step 3 — try to make a Pod without requests (this must FAIL)
+task: |
+  **Your goal:** build a small quota-controlled sandbox.
 
-  ```
-  kubectl run bad --image=nginx -n demo
-  ```
+  Requirements:
+  1. Create a namespace named **`sandbox`**.
+  2. Inside `sandbox`, create a ResourceQuota named **`limits`**
+     with:
+     - `pods = 3`
+     - `services = 2`
+     - `requests.cpu = 300m`
+     - `requests.memory = 200Mi`
+  3. Try to create a Pod **without** any resources — this should
+     be **rejected** by the API.
+  4. Create a Pod **with** small requests — this should succeed.
+  5. Press `c`.
 
-  You should get an error about `must specify`. Good — the quota
-  worked.
-
-  Now make one **with** requests:
-  ```
-  kubectl run good --image=nginx -n demo \
-    --overrides='{"spec":{"containers":[{"name":"good","image":"nginx","resources":{"requests":{"cpu":"50m","memory":"32Mi"},"limits":{"cpu":"100m","memory":"64Mi"}}}]}}'
-  ```
-
-  ### Step 4 — check
-
-  ```
-  kubectl describe resourcequota q -n demo
-  ```
-
-  You should see `used: pods 1` and small cpu/memory numbers.
-  Then press `c`.
-
-  Clean up later:
-  ```
-  kubectl delete namespace demo
-  ```
-
-  (Deleting the namespace also deletes everything inside it.)
-hint: "kubectl get all -n demo  -- see all resources in the namespace"
+  Clean up later: `kubectl delete namespace sandbox`. Deleting the
+  namespace also deletes everything inside it.
+hint: |
+  - Namespace: `kubectl create namespace sandbox`.
+  - Apply the ResourceQuota YAML with a heredoc, `namespace: sandbox` in metadata.
+  - Rejected Pod (must fail):
+    `kubectl run bad --image=nginx -n sandbox`  → expect an error mentioning "must specify".
+  - Accepted Pod (with requests): use `--overrides` with a JSON that adds `resources.requests.cpu` and `resources.requests.memory`, or apply a YAML.
+  - See usage: `kubectl describe resourcequota limits -n sandbox`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get resourcequota q -n demo -o jsonpath='{.spec.hard.pods}'"
-  expect: "5"
-  timeout_seconds: 15
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get resourcequota limits -n sandbox -o jsonpath='{.spec.hard.pods}'"
+      expect: "3"
+    - type: command
+      cmd: "kubectl get resourcequota limits -n sandbox -o jsonpath='{.spec.hard.services}'"
+      expect: "2"

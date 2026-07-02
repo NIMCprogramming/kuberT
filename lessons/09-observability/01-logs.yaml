@@ -6,86 +6,67 @@ estimated_minutes: 12
 intro: |
   # Logs
 
-  When your app writes to **stdout** or **stderr** inside a
-  container, Kubernetes saves that text as **logs**. You read
-  them with `kubectl logs`.
+  Anything a container writes to **stdout** or **stderr** is saved
+  by Kubernetes as **logs**. You read them with `kubectl logs`.
 
-  For big projects, teams ship logs to a central tool: **Loki**,
-  **Elasticsearch**, or a cloud service. A small agent on each
-  node reads the log files from disk and sends them onward.
-
-  ## Break `kubectl logs` apart
+  ## The shape
 
   ```
-  kubectl logs POD_OR_DEPLOY [FLAGS]
+  kubectl logs TARGET [FLAGS]
   ```
 
   Common targets:
-  - `web-abc123` — the exact Pod name.
-  - `deploy/web` — the Deployment. `kubectl` picks one of its Pods.
-  - `job/hello` — a Job's Pod.
+  - `POD_NAME` — the exact Pod.
+  - `deploy/NAME` — the Deployment (kubectl picks one Pod).
+  - `job/NAME` — a Job's Pod.
 
   Useful flags:
-  - `-f` — **follow**. Stream new lines as they appear (like
-    `tail -f`). Press `Ctrl+C` to stop.
-  - `--previous` — logs from the **previous container** in this
-    Pod. Useful after a crash-restart.
-  - `-c NAME` — pick a container inside a multi-container Pod.
-  - `--tail=100` — only the last 100 lines (default: all).
-  - `--since=5m` or `--since-time=2025-01-01T00:00:00Z` — recent
-    logs only.
+  - `-f` — **follow** (stream new lines). Ctrl+C to stop.
+  - `--previous` — logs from the **previous** container (after a
+    crash).
+  - `-c CONTAINER` — pick a container in a multi-container Pod.
+  - `--tail=N` — only the last N lines.
+  - `--since=5m` — only recent.
   - `--all-containers` — logs from every container in the Pod.
-  - `--timestamps` — add a timestamp to every line.
+  - `--timestamps` — add a timestamp to each line.
 
 task: |
-  You will use three of these flags on a real Pod.
+  **Your goal:** produce and read logs on purpose.
 
-  ### Step 1 — make sure a Deployment exists
+  Requirements:
+  1. Create a Deployment named **`talker`** with **1 replica**,
+     image **`busybox`**, whose container runs a shell loop that
+     prints an incrementing counter every second, forever.
+     Example line: `count=1`, `count=2`, ...
+  2. Wait until READY is `1/1`.
+  3. Read the **last 3 lines** of its logs.
+  4. Stream logs live (`-f`) in one terminal. In another terminal
+     delete the Pod. Watch the stream stop. Then the Deployment
+     starts a new Pod — read logs again and confirm the counter
+     started again from `count=1`.
+  5. Read logs with `--previous` to see the last lines from the
+     old (deleted) container.
+  6. Press `c`.
 
-  ```
-  kubectl create deployment web --image=nginx --replicas=1
-  ```
-
-  Wait until `kubectl get deploy web` shows READY `1/1`.
-
-  ### Step 2 — read logs in different ways
-
-  Just print the current logs:
-  ```
-  kubectl logs deploy/web
-  ```
-
-  Last 5 lines only:
-  ```
-  kubectl logs deploy/web --tail=5
-  ```
-
-  Follow live (open a **second** terminal at the same time):
-  ```
-  kubectl logs -f deploy/web
-  ```
-
-  In another terminal, generate a log line by calling the app:
-  ```
-  kubectl run pinger --rm -it --restart=Never --image=curlimages/curl -- \
-    curl -s http://web
-  ```
-
-  You should see a new access-log line in the follow window.
-  Press `Ctrl+C` there to stop.
-
-  ### Step 3 — check
-
-  Press `c`. The check just confirms the Deployment is ready.
-
-  Clean up later:
-  ```
-  kubectl delete deploy web
-  ```
-hint: "kubectl logs deploy/web --previous  -- shows the last logs after a crash-restart"
+  Clean up later: delete the Deployment.
+hint: |
+  - Simplest way to get a busybox loop into a Deployment YAML:
+    ```
+    command: ["sh", "-c", "i=1; while true; do echo count=$i; i=$((i+1)); sleep 1; done"]
+    ```
+    (Use `<<'EOF'` for the heredoc so `$i` and `$((...))` are NOT expanded by your shell.)
+  - Last 3 lines: `kubectl logs deploy/talker --tail=3`.
+  - Follow: `kubectl logs -f deploy/talker`.
+  - After a Pod restart, `--previous` reads the OLD container:
+    `kubectl logs <pod-name> --previous`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get deploy web -o jsonpath='{.status.readyReplicas}'"
-  expect: "1"
-  timeout_seconds: 90
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get deploy talker -o jsonpath='{.status.readyReplicas}'"
+      expect: "1"
+      timeout_seconds: 120
+    - type: command
+      cmd: "kubectl logs deploy/talker --tail=3"
+      expect: "count="

@@ -2,27 +2,24 @@ id: 05-configuration/01-configmaps
 title: "ConfigMaps"
 module: configuration
 order: 1
-estimated_minutes: 15
+estimated_minutes: 20
 intro: |
   # ConfigMaps
 
-  A **ConfigMap** stores settings for your app inside the cluster.
-  Examples:
-  - a URL for another service (`DB_URL=postgres://...`)
-  - a feature flag (`ENABLE_NEW_UI=true`)
-  - a small config file (`nginx.conf`)
+  A **ConfigMap** stores settings for your app inside the cluster:
+  URLs, feature flags, small config files.
 
-  Your Docker **image stays the same**. Only the ConfigMap changes
-  when the settings change.
+  Your Docker image stays the same. Only the ConfigMap changes
+  when settings change.
 
   A Pod can read a ConfigMap in two ways:
   1. As **environment variables**.
   2. As **files** mounted inside the container.
 
   Do **not** put passwords or tokens in a ConfigMap — use a
-  **Secret** for that (next lesson).
+  **Secret** for that.
 
-  ## Three ways to make a ConfigMap
+  ## Three ways to make one
 
   ```
   kubectl create configmap NAME --from-literal=KEY=VALUE
@@ -30,95 +27,66 @@ intro: |
   kubectl create configmap NAME --from-env-file=vars.env
   ```
 
-  Let's break the first flag apart:
-  `--from-literal=GREETING=hello`
-  - `--from-literal=` — the value is a **literal string** typed on
-    the command line (not from a file).
-  - `GREETING` — the **key name** inside the ConfigMap.
+  Break `--from-literal=GREETING=hello` apart:
+  - `--from-literal=` — value is a **literal string** on the CLI.
+  - `GREETING` — the **key name** in the ConfigMap.
   - `hello` — the **value** for that key.
 
-  So after the command, the ConfigMap `data` looks like:
+  Result:
   ```
   data:
     GREETING: hello
   ```
 
-  A Pod does not read a ConfigMap by itself. You must **wire** the
-  ConfigMap into the Pod's `spec` — as env vars or as files. You
-  will do that in the task below.
+  ## Wiring it into a Pod (env-var pattern)
+
+  ```yaml
+  env:
+    - name: MY_VAR             # env var name in the container
+      valueFrom:
+        configMapKeyRef:
+          name: CM_NAME        # which ConfigMap
+          key:  CM_KEY         # which key
+  ```
 
 task: |
-  You will do three steps:
-  1. Make the ConfigMap.
-  2. Run a Pod that **reads** the ConfigMap as an environment
-     variable and prints it.
-  3. Check that the Pod really sees the value.
+  **Your goal:** create a ConfigMap AND make a Pod that actually
+  reads it.
 
-  ### Step 1 — make the ConfigMap
-
-  ```
-  kubectl create configmap app-config --from-literal=GREETING=hello
-  ```
-
-  ### Step 2 — make a Pod that uses it
-
-  The `<<'EOF'` (with the quotes) stops your shell from
-  expanding `$GREETING` before Kubernetes sees it.
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: cm-demo
-  spec:
-    restartPolicy: Never
-    containers:
-      - name: c
-        image: busybox
-        command: ["sh", "-c", "echo GREETING=$GREETING; sleep 3600"]
-        env:
-          - name: GREETING             # env var name inside the container
-            valueFrom:
-              configMapKeyRef:
-                name: app-config       # the ConfigMap
-                key: GREETING          # which key from it
-  EOF
-  ```
-
-  ### Step 3 — check
-
-  Wait a few seconds for the Pod to run:
-  ```
-  kubectl get pod cm-demo
-  ```
-
-  Then read its logs:
-  ```
-  kubectl logs cm-demo
-  ```
-
-  You should see one line:
-  ```
-  GREETING=hello
-  ```
+  Requirements:
+  1. Create a ConfigMap named **`app-config`** with two keys:
+     - `GREETING = hola`
+     - `LEVEL = info`
+  2. Create a Pod named **`cm-user`** using image
+     **`busybox`** whose container:
+     - has env var `GREETING` from key `GREETING` in `app-config`
+     - has env var `LOG_LEVEL` from key `LEVEL` in `app-config`
+       (note: env var name is different from the key name)
+     - runs `sh -c "echo GREETING=$GREETING LOG_LEVEL=$LOG_LEVEL; sleep 3600"`
+     - has `restartPolicy: Never`
+  3. Read the Pod logs. You must see one line:
+     `GREETING=hola LOG_LEVEL=info`
 
   Then press `c`.
 
-  Clean up when done:
-  ```
-  kubectl delete pod cm-demo
-  kubectl delete configmap app-config
-  ```
-hint: "kubectl exec cm-demo -- env | grep GREETING  -- see all env vars inside the running container"
+  Clean up later: delete the Pod and the ConfigMap.
+hint: |
+  - ConfigMap with many keys in one command:
+    `kubectl create configmap app-config --from-literal=GREETING=hola --from-literal=LEVEL=info`
+  - The env var name inside the container and the ConfigMap key are two DIFFERENT things. `name: LOG_LEVEL` gives you `$LOG_LEVEL` in the container, `key: LEVEL` says which ConfigMap key to read.
+  - Wrap the heredoc in `<<'EOF'` (with quotes) so `$GREETING` and `$LOG_LEVEL` do NOT get expanded before Kubernetes sees them.
+  - Verify env from inside: `kubectl exec cm-user -- env | grep -E 'GREETING|LOG_LEVEL'`.
 requires: [cluster]
 check:
   type: multiple
   checks:
     - type: command
       cmd: "kubectl get configmap app-config -o jsonpath='{.data.GREETING}'"
-      expect: "hello"
+      expect: "hola"
     - type: command
-      cmd: "kubectl logs cm-demo"
-      expect: "GREETING=hello"
+      cmd: "kubectl get configmap app-config -o jsonpath='{.data.LEVEL}'"
+      expect: "info"
+    - type: command
+      cmd: "kubectl logs cm-user"
+      expect: "GREETING=hola LOG_LEVEL=info"
       timeout_seconds: 60

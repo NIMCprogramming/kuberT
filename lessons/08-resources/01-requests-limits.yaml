@@ -6,108 +6,84 @@ estimated_minutes: 15
 intro: |
   # CPU and memory: requests and limits
 
-  Every container can ask for CPU and memory. Two numbers matter:
+  Every container can ask for CPU and memory.
 
   - **Request** — the amount the container **needs**. The
-    scheduler uses this to pick a node. If no node has enough free
-    CPU or memory, the Pod stays `Pending`.
+    scheduler uses this to pick a node. If no node has enough
+    free CPU or memory, the Pod stays `Pending`.
   - **Limit** — the **max** the container can use. Above the CPU
-    limit, the container is *throttled* (it just runs slower).
-    Above the memory limit, Kubernetes **kills the container**
-    (status `OOMKilled`) and starts it again.
+    limit → *throttled* (slower). Above the memory limit →
+    **OOMKilled**.
 
   Think of it like renting a room:
-  - Request = "give me at least this much space to live in".
-  - Limit = "I promise not to spread out more than this".
+  - Request = "I need at least this much space".
+  - Limit  = "I promise not to spread out more than this".
 
   ## Units
 
   **CPU**
-  - `1` = one full CPU core.
-  - `500m` = half a core (`m` = *milli*, one thousandth).
+  - `1` = one full core.
+  - `500m` = half a core (`m` = milli, one thousandth).
   - `100m` = 10% of one core.
 
   **Memory**
-  - `Mi` and `Gi` are base-1024 (mebibytes, gibibytes). `128Mi`,
-    `1Gi`, `2Gi`.
-  - `M` and `G` are base-1000 (rare — try to always use `Mi`/`Gi`).
+  - `Mi`, `Gi` — base-1024 (mebi, gibi). Prefer these.
+  - `M`, `G` — base-1000 (rare).
 
-  ## Break the YAML apart
+  ## The YAML shape
 
   ```yaml
-  resources:
-    requests:
-      cpu:    50m       # I need at least 50 millicores
-      memory: 32Mi      # I need at least 32 MiB
-    limits:
-      cpu:    200m      # do not let me use more than 200 mCPU
-      memory: 128Mi     # kill me if I go above 128 MiB
-  ```
-
-  **Advice:** always set a request. Often set a limit too, but
-  keep the limit a bit above the real peak so the app is not
-  killed on a short spike.
-
-task: |
-  You will do three steps.
-
-  ### Step 1 — make a Pod with resource settings
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: sizer
   spec:
     containers:
       - name: c
-        image: nginx
+        image: IMAGE
         resources:
-          requests: { cpu: 50m, memory: 32Mi }
-          limits:   { cpu: 200m, memory: 128Mi }
-  EOF
+          requests:
+            cpu:    50m
+            memory: 32Mi
+          limits:
+            cpu:    200m
+            memory: 128Mi
   ```
 
-  ### Step 2 — see the numbers Kubernetes stored
+task: |
+  **Your goal:** build a Pod with resource settings.
 
-  Read one field with `jsonpath`:
-  ```
-  kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources}'
-  echo
-  ```
+  Requirements:
+  1. Create a Pod named **`sizer`** with one container:
+     - image: **`nginx`**
+     - CPU **request**: **`100m`**
+     - CPU **limit**: **`300m`**
+     - memory **request**: **`64Mi`**
+     - memory **limit**: **`128Mi`**
+  2. Wait until STATUS is `Running`.
+  3. Confirm the numbers from the YAML (see hint).
+  4. Press `c`.
 
-  Or read them from `describe` (nicer to see):
-  ```
-  kubectl describe pod sizer | grep -A4 'Requests\|Limits'
-  ```
+  ## Bonus (optional)
 
-  ### Step 3 — check
+  Make a second Pod that asks for `cpu: 500` (five hundred whole
+  cores). Watch it stay `Pending`. Read the event message with
+  `kubectl describe pod <name>`. Then delete it.
 
-  ```
-  kubectl get pod sizer
-  ```
-
-  When STATUS is `Running`, press `c`.
-
-  Clean up later:
-  ```
-  kubectl delete pod sizer
-  ```
-
-  ## Bonus — try to break it (optional)
-
-  Set an impossibly high request (like `cpu: 500`) and re-apply.
-  The Pod goes `Pending` because no node has 500 cores. Look at
-  the reason:
-  ```
-  kubectl describe pod sizer | grep -A2 Events
-  ```
-  You will see `FailedScheduling`.
-hint: "kubectl describe pod sizer  -- see the Requests/Limits section"
+  Clean up later: delete the `sizer` Pod.
+hint: |
+  - Use YAML with a heredoc. Fill four numbers under `resources`.
+  - Check values:
+    `kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources.requests.cpu}'`
+    `kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources.limits.memory}'`
+  - Reader-friendly view: `kubectl describe pod sizer` and look at the Requests/Limits section.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources.requests.cpu}'"
-  expect: "50m"
-  timeout_seconds: 30
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get pod sizer -o jsonpath='{.status.phase}'"
+      expect: "Running"
+      timeout_seconds: 60
+    - type: command
+      cmd: "kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources.requests.cpu}'"
+      expect: "100m"
+    - type: command
+      cmd: "kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources.limits.memory}'"
+      expect: "128Mi"

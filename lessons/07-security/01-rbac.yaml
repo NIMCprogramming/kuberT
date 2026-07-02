@@ -2,124 +2,95 @@ id: 07-security/01-rbac
 title: "RBAC — who can do what"
 module: security
 order: 1
-estimated_minutes: 18
+estimated_minutes: 20
 intro: |
   # RBAC
 
-  **RBAC** means *Role-Based Access Control*. It answers the
-  question: *"who can do what on the cluster?"*.
+  **RBAC** = *Role-Based Access Control*. It answers:
+  *"who can do what on the cluster?"*.
 
   ## Four small ideas
 
   - **Role** — a list of allowed actions in **one namespace**.
-    Example: *"can read Pods in `default`"*.
   - **ClusterRole** — same, but for the **whole cluster**.
   - **RoleBinding** — link a Role to a **subject** (user, group,
-    or ServiceAccount) in one namespace.
+    ServiceAccount) in one namespace.
   - **ClusterRoleBinding** — same, cluster-wide.
 
   A Role by itself does **nothing**. It only becomes real when a
-  RoleBinding attaches it to someone.
+  RoleBinding attaches it to a subject.
 
-  ## Who are the "subjects"?
+  ## Subjects
 
-  Three kinds:
-  - **User** — a human, identified by client cert or token
-    (kubeconfig).
+  - **User** — a human (identified by client cert or token).
   - **Group** — a list of users.
   - **ServiceAccount (SA)** — an identity for **Pods**. When a
     Pod calls the Kubernetes API, it uses its SA's token.
 
-  ## Break the commands apart
+  ## Example commands (reference)
 
   ```
-  kubectl create serviceaccount reader
+  kubectl create serviceaccount NAME
+  kubectl create role NAME --verb=V1,V2 --resource=R1,R2
+  kubectl create rolebinding NAME --role=ROLE --serviceaccount=NS:SA_NAME
   ```
-  - Just makes an SA named `reader` in the current namespace.
 
-  ```
-  kubectl create role pod-reader --verb=get,list,watch --resource=pods
-  ```
-  - `create role` — kind of resource to create.
-  - `pod-reader` — the Role name.
-  - `--verb=get,list,watch` — the allowed **actions**. Common
-    verbs: `get, list, watch, create, update, patch, delete`.
-  - `--resource=pods` — the API resource this rule applies to
-    (`pods`, `services`, `deployments`, ...).
+  Break the role command apart:
+  - `create role` — kind to create.
+  - `NAME` — the Role name.
+  - `--verb=V1,V2` — allowed **actions**: `get, list, watch,
+    create, update, patch, delete`.
+  - `--resource=R1,R2` — resources: `pods, services, deployments...`
 
-  ```
-  kubectl create rolebinding reader-binds \
-    --role=pod-reader --serviceaccount=default:reader
-  ```
+  Break the rolebinding command apart:
   - `create rolebinding` — a RoleBinding.
-  - `reader-binds` — the RoleBinding name.
-  - `--role=pod-reader` — which Role to grant.
-  - `--serviceaccount=default:reader` — grant it to SA `reader`
-    in namespace `default`. The syntax is `NAMESPACE:NAME`.
+  - `NAME` — the RoleBinding name.
+  - `--role=ROLE` — which Role to grant.
+  - `--serviceaccount=NS:SA_NAME` — grant it to a
+    ServiceAccount. The syntax is `NAMESPACE:NAME`.
 
   ## The magic check command
 
-  You can ask the API *"can this identity do X?"*:
   ```
-  kubectl auth can-i list pods --as=system:serviceaccount:default:reader
+  kubectl auth can-i VERB RESOURCE --as=system:serviceaccount:NS:SA_NAME
   ```
-  You will see `yes` or `no`. Try the same with `delete pods` — it
-  will say `no`, because the Role has no `delete` verb.
-
+  Prints `yes` or `no`.
 task: |
-  You will do four steps.
+  **Your goal:** build a limited identity and prove what it can
+  and cannot do.
 
-  ### Step 1 — make the SA and Role
-
-  ```
-  kubectl create serviceaccount reader
-  kubectl create role pod-reader --verb=get,list,watch --resource=pods
-  kubectl create rolebinding reader-binds \
-    --role=pod-reader --serviceaccount=default:reader
-  ```
-
-  ### Step 2 — check what the SA CAN do
-
-  ```
-  kubectl auth can-i list pods --as=system:serviceaccount:default:reader
-  kubectl auth can-i get pods  --as=system:serviceaccount:default:reader
-  ```
-
-  Both should print `yes`.
-
-  ### Step 3 — check what the SA CANNOT do
-
-  ```
-  kubectl auth can-i delete pods    --as=system:serviceaccount:default:reader
-  kubectl auth can-i list services  --as=system:serviceaccount:default:reader
-  ```
-
-  Both should print `no`. The Role only allows get/list/watch on
-  `pods`.
-
-  ### Step 4 — check
-
-  Look at the Role:
-  ```
-  kubectl get role pod-reader -o yaml
-  ```
+  Requirements:
+  1. Create a ServiceAccount named **`viewer`** in namespace
+     `default`.
+  2. Create a Role named **`ro-svc`** that can only **get** and
+     **list** on **services** (nothing more).
+  3. Create a RoleBinding named **`viewer-ro-svc`** that grants
+     the `ro-svc` Role to the `viewer` ServiceAccount.
+  4. Verify with `kubectl auth can-i`:
+     - `list services` as viewer → **yes**
+     - `get services` as viewer → **yes**
+     - `list pods` as viewer → **no**
+     - `delete services` as viewer → **no**
 
   Then press `c`.
 
-  Clean up later:
-  ```
-  kubectl delete rolebinding reader-binds
-  kubectl delete role pod-reader
-  kubectl delete sa reader
-  ```
-hint: "kubectl auth can-i --list --as=system:serviceaccount:default:reader  -- show every allowed action"
+  Clean up later: delete the RoleBinding, Role, and ServiceAccount.
+hint: |
+  - SA: `kubectl create serviceaccount viewer`
+  - Role: `kubectl create role ro-svc --verb=get,list --resource=services`
+  - Binding: `kubectl create rolebinding viewer-ro-svc --role=ro-svc --serviceaccount=default:viewer`
+  - Check "as": `kubectl auth can-i list services --as=system:serviceaccount:default:viewer`
+  - See ALL allowed actions: `kubectl auth can-i --list --as=system:serviceaccount:default:viewer`
 requires: [cluster]
 check:
   type: multiple
   checks:
     - type: command
-      cmd: "kubectl get role pod-reader -o jsonpath='{.rules[0].verbs}'"
-      expect: "list"
+      cmd: "kubectl get role ro-svc -o jsonpath='{.rules[0].resources}'"
+      expect: "services"
     - type: command
-      cmd: "kubectl auth can-i list pods --as=system:serviceaccount:default:reader"
+      cmd: "kubectl auth can-i list services --as=system:serviceaccount:default:viewer"
       expect: "yes"
+    - type: command
+      cmd: "kubectl auth can-i list pods --as=system:serviceaccount:default:viewer"
+      expect: "no"

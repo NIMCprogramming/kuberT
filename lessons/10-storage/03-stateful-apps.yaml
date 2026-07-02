@@ -2,126 +2,103 @@ id: 10-storage/03-stateful-apps
 title: "Running stateful apps"
 module: storage
 order: 3
-estimated_minutes: 15
+estimated_minutes: 20
 intro: |
   # Stateful apps
 
   Databases and other apps that keep data need:
-  1. **Stable Pod names** — so clients know where to reconnect.
-  2. **Their own disk** — one PVC per Pod, not shared.
-  3. **Ordered start-up** — Pod `-0` first, then `-1`, then `-2`.
+  1. Stable Pod names.
+  2. Their own disk.
+  3. Ordered start-up.
 
-  A **StatefulSet** (module 04) gives you 1 and 3. To get 2, you
-  add a **`volumeClaimTemplates`** — a *template* for PVCs.
-  Kubernetes creates **one PVC per Pod** from this template.
+  A **StatefulSet** (module 04) gives 1 and 3. For 2, add
+  **`volumeClaimTemplates`** — a *template* for PVCs. Kubernetes
+  creates one PVC per Pod from it.
 
-  Naming rule: for a StatefulSet named `data-app`, a PVC named
-  `data` in the template becomes:
-  - `data-data-app-0`
-  - `data-data-app-1`
+  Naming rule: for a StatefulSet named `NAME`, a claim template
+  named `TPL` produces PVCs:
+  - `TPL-NAME-0`
+  - `TPL-NAME-1`
   - ...
 
-  So `PVC_NAME = <template-name>-<statefulset-name>-<index>`.
+  So `PVC_NAME = <template>-<statefulset>-<index>`.
 
-  If a Pod restarts, it re-attaches to the **same** PVC — so the
-  data is safe.
+  If a Pod restarts, it re-attaches to the **same** PVC — data
+  is safe.
 
-  ## Break the YAML apart
+  ## YAML shape
 
   ```yaml
-  spec:
-    serviceName: data-app             # headless Service name
-    replicas: 2
-    selector:
-      matchLabels: { app: data-app }
-    template:                          # POD recipe (same as Deployment)
-      ...
-    volumeClaimTemplates:              # extra piece for StatefulSets
-      - metadata:
-          name: data                   # PVC name prefix
-        spec:
-          accessModes: [ReadWriteOnce]
-          resources:
-            requests: { storage: 100Mi }
-  ```
-
-  This is how Postgres, MySQL, Kafka, and Elasticsearch run on
-  Kubernetes.
-
-task: |
-  You will do three steps.
-
-  ### Step 1 — create the StatefulSet
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
   apiVersion: apps/v1
   kind: StatefulSet
   metadata:
-    name: data-app
+    name: NAME
   spec:
-    serviceName: data-app
-    replicas: 2
+    serviceName: NAME
+    replicas: N
     selector:
-      matchLabels: { app: data-app }
-    template:
+      matchLabels: { app: NAME }
+    template:                          # Pod recipe
       metadata:
-        labels: { app: data-app }
+        labels: { app: NAME }
       spec:
         containers:
           - name: c
-            image: nginx
+            image: IMAGE
             volumeMounts:
-              - name: data
-                mountPath: /usr/share/nginx/html
-    volumeClaimTemplates:
+              - name: TPL              # matches the template name
+                mountPath: /some/path
+    volumeClaimTemplates:              # per-Pod PVCs
       - metadata:
-          name: data
+          name: TPL
         spec:
           accessModes: [ReadWriteOnce]
           resources:
             requests: { storage: 100Mi }
-  EOF
   ```
 
-  ### Step 2 — see one PVC per Pod
+task: |
+  **Your goal:** build a StatefulSet with per-Pod PVCs and prove
+  data survives a Pod restart.
 
-  ```
-  kubectl get pods -l app=data-app
-  kubectl get pvc
-  ```
+  Requirements:
+  1. Create a **StatefulSet** named **`store`** with:
+     - **2 replicas**
+     - image **`nginx`**
+     - selector and template labels: **`app: store`**
+     - `serviceName: store`
+     - each Pod mounts its own **100Mi** PVC at path
+       **`/usr/share/nginx/html`**, via a `volumeClaimTemplates`
+       named **`data`**
+  2. Wait until READY is `2/2`.
+  3. Confirm two PVCs exist: `data-store-0`, `data-store-1`.
+  4. Write a file into **Pod `store-0`**:
+     `echo alpha-pod-0 > /usr/share/nginx/html/index.html`
+  5. **Delete** `store-0`. Wait for the same name `store-0` to
+     come back Ready.
+  6. Read the file from the new `store-0`. It must still contain
+     `alpha-pod-0`. That proves the disk survived.
+  7. Press `c`.
 
-  You should see:
-  - Pods: `data-app-0`, `data-app-1`
-  - PVCs: `data-data-app-0`, `data-data-app-1`
-
-  ### Step 3 — write into one Pod's disk and prove it survives
-
-  Put a file in `data-app-0`'s volume:
-  ```
-  kubectl exec data-app-0 -- sh -c "echo pod-0-data > /usr/share/nginx/html/index.html"
-  kubectl exec data-app-0 -- cat /usr/share/nginx/html/index.html
-  ```
-
-  Delete `data-app-0`. The StatefulSet makes it again with the
-  **same** name and re-attaches the **same** PVC:
-  ```
-  kubectl delete pod data-app-0
-  kubectl wait --for=condition=Ready pod/data-app-0 --timeout=120s
-  kubectl exec data-app-0 -- cat /usr/share/nginx/html/index.html
-  ```
-
-  You should still see `pod-0-data`. Then press `c`.
-
-  Clean up later:
-  ```
-  kubectl delete statefulset data-app
-  kubectl delete pvc -l app=data-app
-  ```
-hint: "kubectl get pod data-app-0 -o jsonpath='{.spec.volumes[0].persistentVolumeClaim.claimName}' -- see the PVC name attached"
+  Clean up later: delete the StatefulSet, then the PVCs
+  (`kubectl delete pvc -l app=store`).
+hint: |
+  - Apply with a heredoc (`<<'EOF'`). Do not forget the four-space indent under `volumeClaimTemplates`.
+  - Write inside: `kubectl exec store-0 -- sh -c "echo alpha-pod-0 > /usr/share/nginx/html/index.html"`.
+  - Read: `kubectl exec store-0 -- cat /usr/share/nginx/html/index.html`.
+  - Wait for the new Pod: `kubectl wait --for=condition=Ready pod/store-0 --timeout=120s`.
+  - See the PVC attached to a Pod: `kubectl get pod store-0 -o jsonpath='{.spec.volumes[0].persistentVolumeClaim.claimName}'`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get statefulset data-app -o jsonpath='{.status.readyReplicas}'"
-  expect: "2"
-  timeout_seconds: 180
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get statefulset store -o jsonpath='{.status.readyReplicas}'"
+      expect: "2"
+      timeout_seconds: 180
+    - type: command
+      cmd: "kubectl get pvc data-store-0 -o jsonpath='{.status.phase}'"
+      expect: "Bound"
+    - type: command
+      cmd: "kubectl get pvc data-store-1 -o jsonpath='{.status.phase}'"
+      expect: "Bound"
