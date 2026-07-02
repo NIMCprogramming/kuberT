@@ -2,9 +2,9 @@ id: 10-storage/02-csi-drivers
 title: "CSI drivers and StorageClasses"
 module: storage
 order: 2
-estimated_minutes: 8
+estimated_minutes: 12
 intro: |
-  # How does the storage get created?
+  # How does the real disk get created?
 
   When you make a PVC, something must create the real disk on the
   cloud (or on the local disk of the node). That "something" is a
@@ -15,28 +15,77 @@ intro: |
   ...) can plug into Kubernetes the same way.
 
   A **StorageClass** is the "menu item" the user picks:
-  - name: `fast-ssd`, `slow-hdd`, `standard`
-  - which CSI driver to use
-  - parameters (size limits, replication, ...)
+  - `name` — like `fast-ssd`, `slow-hdd`, `standard`.
+  - `provisioner` — which CSI driver to use.
+  - `parameters` — size limits, replication, disk type, encryption.
+  - `reclaimPolicy` — what happens to the disk when the PVC is
+    deleted (`Delete` or `Retain`).
 
   If you do not name a StorageClass in your PVC, the cluster's
   **default** StorageClass is used. On `kind`, the default is
-  `standard` (local disk on the node).
+  `standard` (a local disk on the node, provisioned by the
+  `rancher.io/local-path` driver).
 
-  ## Reclaim policy
+  ## Break the fields apart
 
-  When a PVC is deleted, what happens to the disk?
-  - `Delete` — the disk is removed too.
-  - `Retain` — the disk stays, so an admin can recover the data.
+  Look at one:
+  ```
+  kubectl get storageclass standard -o yaml
+  ```
+
+  Key parts:
+  ```yaml
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    name: standard
+    annotations:
+      storageclass.kubernetes.io/is-default-class: "true"  # <-- default
+  provisioner: rancher.io/local-path       # the CSI driver
+  reclaimPolicy: Delete                     # PV deleted with PVC
+  volumeBindingMode: WaitForFirstConsumer   # wait for a Pod, then create
+  ```
+
+  `WaitForFirstConsumer` is important: the PV is only made when a
+  Pod actually uses the PVC. This is common for local-disk drivers,
+  because the disk must be on the same node where the Pod runs.
+
+  ## How to pick a StorageClass in a PVC
+
+  Add one line under `spec:` in the PVC YAML:
+  ```yaml
+  spec:
+    storageClassName: standard
+    ...
+  ```
+
+  Or `storageClassName: ""` to say *"no dynamic provisioning; only
+  match an existing PV"*.
+
 task: |
-  List the StorageClasses on your cluster.
+  ### Step 1 — list the StorageClasses
 
   ```
   kubectl get storageclass
   ```
 
-  You should see one marked `(default)`. Then press `c`.
-hint: "kubectl get storageclass standard -o yaml  -- see the provisioner (CSI driver)"
+  You should see one marked `(default)`.
+
+  ### Step 2 — look at the default in detail
+
+  ```
+  kubectl get storageclass standard -o yaml
+  ```
+
+  Notice:
+  - `provisioner:` — the CSI driver name.
+  - `reclaimPolicy:` — usually `Delete` on `kind`.
+  - `volumeBindingMode:` — usually `WaitForFirstConsumer`.
+
+  ### Step 3 — check
+
+  When you can see one default class, press `c`.
+hint: "kubectl describe storageclass standard  -- same info, nicer to read"
 requires: [cluster]
 check:
   type: command
