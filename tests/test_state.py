@@ -18,3 +18,11 @@ def test_save_creates_directory(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("KUBERT_STATE_DIR", str(nested))
     save_progress(UserProgress(completed_lessons=["x"]))
     assert (nested / "progress.json").exists()
+
+
+def test_load_ignores_unknown_fields(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("KUBERT_STATE_DIR", str(tmp_path))
+    (tmp_path / "progress.json").write_text(
+        '{"schema_version": 1, "completed_lessons": ["a"]}'
+    )
+    assert load_progress().completed_lessons == ["a"]

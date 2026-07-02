@@ -46,6 +46,6 @@ class Lesson(BaseModel):
 
 
 class UserProgress(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     completed_lessons: list[str] = Field(default_factory=list)
     current_cluster_name: str | None = None
