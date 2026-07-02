@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from kubert.lesson import discover_lessons, get_default_lessons_root, load_lesson_file
-from kubert.models import CommandCheck, Lesson, ManualCheck
+from kubert.models import CommandCheck, Lesson, ManualCheck, MultipleCheck
 
 LESSONS_ROOT = get_default_lessons_root()
 
@@ -45,9 +45,11 @@ def test_manual_check_loads() -> None:
 def test_command_check_loads() -> None:
     lessons = discover_lessons(LESSONS_ROOT)
     pods = next(lesson for lesson in lessons if lesson.id.endswith("pods"))
-    assert isinstance(pods.check, CommandCheck)
-    assert pods.check.cmd
-    assert pods.check.expect == "Running"
+    assert isinstance(pods.check, MultipleCheck)
+    assert any(
+        isinstance(c, CommandCheck) and "Running" in c.expect
+        for c in pods.check.checks
+    )
 
 
 def test_pods_lesson_declares_cluster_requirement() -> None:
