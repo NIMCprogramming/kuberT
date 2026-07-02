@@ -2,40 +2,77 @@ id: 06-services-networking/02-external-access
 title: "External access with NodePort"
 module: services-networking
 order: 2
-estimated_minutes: 10
+estimated_minutes: 12
 intro: |
   # NodePort
 
   A **ClusterIP** Service is only visible inside the cluster. To
-  let people outside the cluster reach your app, you need something
-  more.
+  let people outside the cluster reach your app, you need more.
 
   A **NodePort** Service opens **the same port on every node** in
   the cluster. Someone outside can then call `NODE_IP:NODE_PORT`
   and hit your app.
 
   A NodePort works, but it is not pretty:
-  - The port is a big number, like `31234`.
+  - The port is a big number, like `31234` (range 30000–32767 by
+    default).
   - You must know a node's IP.
 
   In real projects you often put an **Ingress** or a
   **LoadBalancer** in front. But NodePort is good to learn first.
+
+  ## Change an existing Service to NodePort
+
+  You do not have to delete and re-make it. Use `kubectl patch`:
+  ```
+  kubectl patch svc web -p '{"spec":{"type":"NodePort"}}'
+  ```
+  - `patch svc web` — modify Service `web`.
+  - `-p '<json>'` — the JSON change (a partial update).
+  - `{"spec":{"type":"NodePort"}}` — only change `.spec.type`,
+    leave other fields alone.
+
+  Kubernetes then picks a free node port for you automatically. You
+  can also set it by hand with `nodePort: 30080` in the YAML.
+
 task: |
-  Turn the `web` Service from the last lesson into a NodePort:
+  You will do three steps.
+
+  ### Step 1 — patch the Service to NodePort
 
   ```
   kubectl patch svc web -p '{"spec":{"type":"NodePort"}}'
   ```
 
-  Look at the assigned node port:
+  ### Step 2 — see the port
 
   ```
   kubectl get svc web
   ```
 
-  You should see a port like `80:3XXXX/TCP` in the PORT(S) column.
-  Then press `c`.
-hint: "kubectl get svc web -o jsonpath='{.spec.ports[0].nodePort}'  -- shows the node port"
+  Look at the `PORT(S)` column. You will see something like
+  `80:31234/TCP`. The `31234` is the node port.
+
+  Read only that number:
+  ```
+  kubectl get svc web -o jsonpath='{.spec.ports[0].nodePort}'
+  ```
+
+  ### Step 3 — call it (kind-specific note)
+
+  On a `kind` cluster, the node runs inside a Docker container.
+  You cannot reach `node-ip:31234` from the host easily. The
+  simplest test is still from **inside** the cluster:
+  ```
+  kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
+    curl -s -o /dev/null -w "%{http_code}\n" http://web
+  ```
+
+  You should see `200`. To reach a NodePort from your laptop on a
+  real cluster, you would use `curl <NODE_IP>:<NODE_PORT>`.
+
+  When Type is `NodePort`, press `c`.
+hint: "kubectl get svc web -o jsonpath='{.spec.ports[0].nodePort}'"
 requires: [cluster]
 check:
   type: command

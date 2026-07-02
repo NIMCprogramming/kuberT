@@ -2,29 +2,74 @@ id: 07-security/01-rbac
 title: "RBAC — who can do what"
 module: security
 order: 1
-estimated_minutes: 12
+estimated_minutes: 18
 intro: |
   # RBAC
 
   **RBAC** means *Role-Based Access Control*. It answers the
   question: *"who can do what on the cluster?"*.
 
-  Four small ideas:
+  ## Four small ideas
+
   - **Role** — a list of allowed actions in **one namespace**.
-    Example: *"can read Pods in `dev`"*.
+    Example: *"can read Pods in `default`"*.
   - **ClusterRole** — same, but for the **whole cluster**.
-  - **RoleBinding** — link a Role to a user (or group, or service
-    account) in one namespace.
+  - **RoleBinding** — link a Role to a **subject** (user, group,
+    or ServiceAccount) in one namespace.
   - **ClusterRoleBinding** — same, cluster-wide.
 
-  Rule of thumb:
-  - Human user? Usually a Role + RoleBinding per namespace.
-  - App inside the cluster? Usually a **ServiceAccount** + Role +
-    RoleBinding.
-  - Cluster admin? ClusterRole + ClusterRoleBinding.
+  A Role by itself does **nothing**. It only becomes real when a
+  RoleBinding attaches it to someone.
+
+  ## Who are the "subjects"?
+
+  Three kinds:
+  - **User** — a human, identified by client cert or token
+    (kubeconfig).
+  - **Group** — a list of users.
+  - **ServiceAccount (SA)** — an identity for **Pods**. When a
+    Pod calls the Kubernetes API, it uses its SA's token.
+
+  ## Break the commands apart
+
+  ```
+  kubectl create serviceaccount reader
+  ```
+  - Just makes an SA named `reader` in the current namespace.
+
+  ```
+  kubectl create role pod-reader --verb=get,list,watch --resource=pods
+  ```
+  - `create role` — kind of resource to create.
+  - `pod-reader` — the Role name.
+  - `--verb=get,list,watch` — the allowed **actions**. Common
+    verbs: `get, list, watch, create, update, patch, delete`.
+  - `--resource=pods` — the API resource this rule applies to
+    (`pods`, `services`, `deployments`, ...).
+
+  ```
+  kubectl create rolebinding reader-binds \
+    --role=pod-reader --serviceaccount=default:reader
+  ```
+  - `create rolebinding` — a RoleBinding.
+  - `reader-binds` — the RoleBinding name.
+  - `--role=pod-reader` — which Role to grant.
+  - `--serviceaccount=default:reader` — grant it to SA `reader`
+    in namespace `default`. The syntax is `NAMESPACE:NAME`.
+
+  ## The magic check command
+
+  You can ask the API *"can this identity do X?"*:
+  ```
+  kubectl auth can-i list pods --as=system:serviceaccount:default:reader
+  ```
+  You will see `yes` or `no`. Try the same with `delete pods` — it
+  will say `no`, because the Role has no `delete` verb.
+
 task: |
-  Create a Role that can only **read Pods** in the default
-  namespace, and bind it to a ServiceAccount named `reader`.
+  You will do four steps.
+
+  ### Step 1 — make the SA and Role
 
   ```
   kubectl create serviceaccount reader
@@ -33,20 +78,48 @@ task: |
     --role=pod-reader --serviceaccount=default:reader
   ```
 
-  Check the Role:
+  ### Step 2 — check what the SA CAN do
 
+  ```
+  kubectl auth can-i list pods --as=system:serviceaccount:default:reader
+  kubectl auth can-i get pods  --as=system:serviceaccount:default:reader
+  ```
+
+  Both should print `yes`.
+
+  ### Step 3 — check what the SA CANNOT do
+
+  ```
+  kubectl auth can-i delete pods    --as=system:serviceaccount:default:reader
+  kubectl auth can-i list services  --as=system:serviceaccount:default:reader
+  ```
+
+  Both should print `no`. The Role only allows get/list/watch on
+  `pods`.
+
+  ### Step 4 — check
+
+  Look at the Role:
   ```
   kubectl get role pod-reader -o yaml
   ```
 
   Then press `c`.
 
-  Clean up:
-  `kubectl delete rolebinding reader-binds; kubectl delete role pod-reader; kubectl delete sa reader`
-hint: "kubectl auth can-i list pods --as=system:serviceaccount:default:reader  -- should say yes"
+  Clean up later:
+  ```
+  kubectl delete rolebinding reader-binds
+  kubectl delete role pod-reader
+  kubectl delete sa reader
+  ```
+hint: "kubectl auth can-i --list --as=system:serviceaccount:default:reader  -- show every allowed action"
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get role pod-reader -o jsonpath='{.rules[0].verbs}'"
-  expect: "list"
-  timeout_seconds: 15
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get role pod-reader -o jsonpath='{.rules[0].verbs}'"
+      expect: "list"
+    - type: command
+      cmd: "kubectl auth can-i list pods --as=system:serviceaccount:default:reader"
+      expect: "yes"

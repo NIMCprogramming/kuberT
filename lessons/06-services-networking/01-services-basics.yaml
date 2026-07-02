@@ -2,7 +2,7 @@ id: 06-services-networking/01-services-basics
 title: "Services basics"
 module: services-networking
 order: 1
-estimated_minutes: 10
+estimated_minutes: 15
 intro: |
   # Services
 
@@ -10,40 +10,79 @@ intro: |
   other Pods find your app?
 
   Answer: a **Service**. A Service is a **stable name and IP** in
-  front of a group of Pods. Kubernetes updates the group for you
+  front of a group of Pods. Kubernetes keeps the group up to date
   as Pods come and go.
-
-  The Service uses a **label selector** to pick Pods. Example:
-  `app=web`. Every Pod with that label is behind the Service.
 
   Three main Service types:
   - **ClusterIP** — only inside the cluster (the default).
-  - **NodePort** — open a port on every node.
+  - **NodePort** — open a port on every node (next lesson).
   - **LoadBalancer** — ask the cloud for a public IP.
 
-  This lesson only makes a **ClusterIP** Service.
-task: |
-  You need a Deployment first. If you deleted `web` earlier, make
-  it again:
+  ## How does the Service pick its Pods?
 
+  It uses a **label selector**. Example: `app=web`. Every Pod with
+  label `app=web` is behind the Service.
+
+  Under the hood Kubernetes keeps an **Endpoints** object with the
+  IPs of all matching Pods. You can look at it any time:
+  ```
+  kubectl get endpoints web
+  ```
+
+  ## Break `kubectl expose` apart
+
+  ```
+  kubectl expose deployment web --port=80 --target-port=80 --name=web
+  ```
+  - `expose deployment web` — take the Pods behind Deployment
+    `web` and put a Service in front.
+  - `--port=80` — the port on the **Service**. Clients call
+    `web:80`.
+  - `--target-port=80` — the port **inside the Pod** (where nginx
+    listens).
+  - `--name=web` — the Service name (default: same as the source).
+  - By default the Service type is **ClusterIP**.
+
+task: |
+  You will do four steps.
+
+  ### Step 1 — make sure a Deployment exists
+
+  If you deleted `web` earlier, make it again:
   ```
   kubectl create deployment web --image=nginx --replicas=2
   ```
 
-  Now put a Service in front of it on port 80:
+  ### Step 2 — put a Service in front of it
 
   ```
   kubectl expose deployment web --port=80 --target-port=80 --name=web
   ```
 
-  Check it:
+  ### Step 3 — look at it
 
   ```
   kubectl get svc web
+  kubectl get endpoints web
   ```
 
-  You should see a **CLUSTER-IP**. Then press `c`.
-hint: "kubectl get endpoints web  -- lists the Pod IPs behind the Service"
+  The `ENDPOINTS` column should list two Pod IPs (because
+  `replicas=2`).
+
+  ### Step 4 — call the Service from another Pod
+
+  Run a short-lived `curl` Pod that talks to the Service by name:
+  ```
+  kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
+    curl -s -o /dev/null -w "%{http_code}\n" http://web
+  ```
+
+  You should see `200`. This proves DNS worked (the name `web`
+  resolved to the Service IP) and the Service load-balanced the
+  request to a Pod.
+
+  When you see `200`, press `c`.
+hint: "kubectl describe svc web  -- see Selector, Type, and the current Endpoints"
 requires: [cluster]
 check:
   type: command
