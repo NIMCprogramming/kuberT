@@ -47,6 +47,7 @@ class LessonScreen(Screen[None]):
         Binding("escape", "app.pop_screen", "Back"),
         Binding("c",      "do_primary",     "Check / Confirm"),
         Binding("h",      "do_hint",        "Hint"),
+        Binding("n",      "do_next",        "Next lesson"),
         Binding("s",      "app.pop_screen", "Skip"),
     ]
     CSS = """
@@ -75,9 +76,9 @@ class LessonScreen(Screen[None]):
         if not ok:
             log.write(f"[red]{msg}[/red]")
         else:
-            tip = "Press [b]c[/b] to mark as read." if isinstance(
+            tip = "Press [b]c[/b] to mark as read, or [b]n[/b] to skip to next." if isinstance(
                 self.lesson.check, ManualCheck
-            ) else "Press [b]c[/b] to check, [b]h[/b] for a hint, [b]s[/b] to skip."
+            ) else "Press [b]c[/b] to check, [b]h[/b] for hint, [b]n[/b] for next, [b]s[/b] to skip."
             log.write(f"[dim]{tip}[/dim]")
 
     def _check_req(self) -> tuple[bool, str]:
@@ -94,8 +95,7 @@ class LessonScreen(Screen[None]):
     def action_do_primary(self) -> None:
         if isinstance(self.lesson.check, ManualCheck):
             self._mark_complete()
-            self.app.notify("Lesson complete!", severity="information")
-            self.app.pop_screen()
+            self.action_do_next()
             return
         ok, msg = self._check_req()
         log = self.query_one("#output", RichLog)
@@ -105,8 +105,9 @@ class LessonScreen(Screen[None]):
         result = run_check(self.lesson.check)
         if result.passed:
             log.write(f"[green]OK: {result.detail}[/green]")
+            log.write("[dim]Press [b]n[/b] for the next lesson.[/dim]")
             self._mark_complete()
-            self.app.notify("Lesson complete!", severity="information")
+            self.app.notify("Lesson complete! Press n for next.", severity="information")
         else:
             log.write(f"[red]FAIL: {result.detail}[/red]")
 
@@ -116,6 +117,17 @@ class LessonScreen(Screen[None]):
             log.write("[dim]No hint for reading lessons.[/dim]")
             return
         log.write(f"[blue]Hint: {self.lesson.hint or 'No hint.'}[/blue]")
+
+    def action_do_next(self) -> None:
+        progress = load_progress()
+        for lesson in discover_lessons(get_default_lessons_root()):
+            if lesson.id == self.lesson.id:
+                continue
+            if lesson.id not in progress.completed_lessons:
+                self.app.pop_screen()
+                self.app.push_screen(LessonScreen(lesson))
+                return
+        self.app.notify("No more unfinished lessons.", severity="information")
 
     def _mark_complete(self) -> None:
         p = load_progress()

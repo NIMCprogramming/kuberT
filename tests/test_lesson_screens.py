@@ -36,3 +36,8 @@ def test_lesson_screen_check_req_no_requirements() -> None:
     screen = LessonScreen(lesson)
     ok, _ = screen._check_req()
     assert ok is True
+
+
+def test_lesson_screen_has_next_binding() -> None:
+    keys = [b.key for b in LessonScreen.BINDINGS]
+    assert "n" in keys
