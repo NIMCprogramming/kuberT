@@ -4,6 +4,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
 from kubert import cluster
+from kubert.cheat_screen import CheatPanelScreen
 from kubert.cluster_screens import InitScreen, ResetConfirmScreen
 from kubert.lesson import discover_lessons, get_default_lessons_root
 from kubert.lesson_screens import LessonPickerScreen, LessonScreen
@@ -12,6 +13,7 @@ from kubert.state import load_progress, reset_progress
 MENU = [
     ("next",     "Run next unfinished lesson"),
     ("pick",     "Pick a lesson from the list"),
+    ("cheat",    "Cheat panel (only what you learned)"),
     ("init",     "Check tools / create cluster"),
     ("status",   "Show cluster status"),
     ("reset",    "Delete cluster"),
@@ -49,6 +51,8 @@ class MainMenuScreen(Screen[None]):
             self._open_next()
         elif action == "pick":
             self.app.push_screen(LessonPickerScreen())
+        elif action == "cheat":
+            self.app.push_screen(CheatPanelScreen())
         elif action == "init":
             self.app.push_screen(InitScreen())
         elif action == "status":

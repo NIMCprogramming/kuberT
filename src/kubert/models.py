@@ -41,6 +41,7 @@ class Lesson(BaseModel):
     intro: str
     task: str
     hint: str = ""
+    cheat: str = ""
     check: Check
     requires: list[Requirement] = Field(default_factory=list)
 
