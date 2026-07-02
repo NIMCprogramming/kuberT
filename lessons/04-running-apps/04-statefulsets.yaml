@@ -1,0 +1,61 @@
+id: 04-running-apps/04-statefulsets
+title: "StatefulSets"
+module: running-apps
+order: 4
+estimated_minutes: 12
+intro: |
+  # StatefulSets
+
+  A **StatefulSet** is like a Deployment, but for apps that must
+  remember data — like databases (Postgres, MySQL, MongoDB).
+
+  Key differences from a Deployment:
+  - Pods get **stable names**: `db-0`, `db-1`, `db-2`. They do not
+    change if a Pod restarts.
+  - Pods start **in order**: `db-0` first, then `db-1`, then `db-2`.
+  - Each Pod can get its **own disk** that stays with it.
+
+  A Deployment says: *"give me 3 web servers, any names are OK".*
+  A StatefulSet says: *"give me 3 database Pods, and they must be
+  db-0, db-1, db-2, in that order, with their own disks".*
+task: |
+  Create a small StatefulSet with 2 copies of nginx.
+
+  ```
+  cat <<EOF | kubectl apply -f -
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: web-ss
+  spec:
+    serviceName: web-ss
+    replicas: 2
+    selector:
+      matchLabels: { app: web-ss }
+    template:
+      metadata:
+        labels: { app: web-ss }
+      spec:
+        containers:
+          - name: nginx
+            image: nginx
+  EOF
+  ```
+
+  Check the Pod names:
+
+  ```
+  kubectl get pod -l app=web-ss
+  ```
+
+  You should see **web-ss-0** and **web-ss-1** — not random names.
+  Then press `c`.
+
+  Clean up with: `kubectl delete statefulset web-ss`
+hint: "kubectl get statefulset web-ss  -- watch READY reach 2/2"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get statefulset web-ss -o jsonpath='{.status.readyReplicas}'"
+  expect: "2"
+  timeout_seconds: 90

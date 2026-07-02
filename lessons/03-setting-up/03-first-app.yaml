@@ -1,0 +1,44 @@
+id: 03-setting-up/03-first-app
+title: "Your first app on the cluster"
+module: setting-up
+order: 3
+estimated_minutes: 10
+intro: |
+  # Your first app
+
+  Time to run something on your cluster. The simplest app is
+  **nginx** — a small web server.
+
+  You will:
+  1. Start an nginx container as a Pod.
+  2. Wait for it to be **Running**.
+  3. Delete it when you are done.
+
+  Real apps use **Deployments** (later lesson), but for the very
+  first time a Pod is enough.
+task: |
+  In another terminal, create the Pod:
+
+  ```
+  kubectl run web --image=nginx
+  ```
+
+  Wait about ten seconds. Then check:
+
+  ```
+  kubectl get pod web
+  ```
+
+  When STATUS is **Running**, come back here and press `c`.
+
+  When you finish this module, you can clean up with:
+  ```
+  kubectl delete pod web
+  ```
+hint: "kubectl get pod web -o wide  -- shows the internal IP too"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get pod web -o jsonpath='{.status.phase}'"
+  expect: "Running"
+  timeout_seconds: 60

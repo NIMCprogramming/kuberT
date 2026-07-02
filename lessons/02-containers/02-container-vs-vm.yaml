@@ -1,0 +1,34 @@
+id: 02-containers/02-container-vs-vm
+title: "Container vs virtual machine"
+module: containers
+order: 2
+estimated_minutes: 6
+intro: |
+  # Container vs virtual machine (VM)
+
+  Both containers and VMs run apps in an isolated way. But they
+  are not the same.
+
+  **Virtual machine**
+  - Copies a full computer: CPU, RAM, disk, and a full OS.
+  - Slow to start (30 seconds to a few minutes).
+  - Uses gigabytes of disk.
+  - Very strong isolation. Good for running code you do not trust.
+
+  **Container**
+  - Shares the OS kernel with the host. Only your app and its
+    files are inside.
+  - Fast to start (a second or less).
+  - Uses megabytes of disk.
+  - Weaker isolation than a VM, but still enough for most apps.
+
+  **Simple picture:**
+  - VM = a whole house.
+  - Container = one room in a house you share.
+
+  Kubernetes uses containers because they start fast and use
+  little memory. So you can run many of them at once.
+task: |
+  No task. Press Enter.
+check:
+  type: manual

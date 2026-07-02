@@ -1,0 +1,29 @@
+id: 01-introduction/04-alternatives
+title: "Other tools like Kubernetes"
+module: introduction
+order: 4
+estimated_minutes: 5
+intro: |
+  # Kubernetes is not the only tool
+
+  Kubernetes runs containers on many computers. Other tools do the
+  same job. It is good to know their names.
+
+  - **Docker Swarm** — from the makers of Docker. Small and simple.
+    Easy to start, but has fewer features than Kubernetes.
+  - **Nomad** — from HashiCorp. Can run containers, but also plain
+    programs and virtual machines.
+  - **Amazon ECS** — Amazon's own tool. Only works on AWS.
+  - **Cloud Foundry** — an older tool. Focus on apps, not on
+    containers.
+
+  **Why does Kubernetes win most of the time?**
+  - Big community. Many people help and share YAML files.
+  - Works on every cloud (AWS, Google, Azure) and on your laptop.
+  - Many extra tools plug into it (Helm, Prometheus, Istio, …).
+
+  The trade-off: Kubernetes is more work to learn.
+task: |
+  No task. Press Enter.
+check:
+  type: manual

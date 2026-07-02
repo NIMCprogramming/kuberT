@@ -1,0 +1,55 @@
+id: 04-running-apps/02-replicasets
+title: "ReplicaSets"
+module: running-apps
+order: 2
+estimated_minutes: 10
+intro: |
+  # ReplicaSets
+
+  A **ReplicaSet** keeps a fixed number of Pods running.
+  If a Pod stops, the ReplicaSet starts a new one fast.
+
+  You almost never make a ReplicaSet by yourself. You make a
+  **Deployment**, and the Deployment makes a ReplicaSet for you.
+  But it is good to know what a ReplicaSet does.
+
+  A ReplicaSet has three key parts:
+  - **replicas** — how many Pods you want.
+  - **selector** — which Pods count. It matches labels.
+  - **template** — the Pod recipe. New Pods use this template.
+task: |
+  Make a ReplicaSet with **3 copies** of the `nginx` image.
+  Use the name `rs-web`.
+
+  In another terminal, run:
+
+  ```
+  cat <<EOF | kubectl apply -f -
+  apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    name: rs-web
+  spec:
+    replicas: 3
+    selector:
+      matchLabels: { app: rs-web }
+    template:
+      metadata:
+        labels: { app: rs-web }
+      spec:
+        containers:
+          - name: nginx
+            image: nginx
+  EOF
+  ```
+
+  Wait a few seconds, then press `c`.
+
+  Clean up later with: `kubectl delete rs rs-web`
+hint: "kubectl get rs rs-web  -- watch READY change from 0 to 3"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get rs rs-web -o jsonpath='{.status.readyReplicas}'"
+  expect: "3"
+  timeout_seconds: 60

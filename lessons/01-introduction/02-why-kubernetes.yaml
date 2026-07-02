@@ -1,0 +1,28 @@
+id: 01-introduction/02-why-kubernetes
+title: "Why people use Kubernetes"
+module: introduction
+order: 2
+estimated_minutes: 5
+intro: |
+  # Why Kubernetes?
+
+  People use Kubernetes for three big reasons.
+
+  1. **It keeps apps alive.** If one computer stops, Kubernetes
+     moves your app to another computer. Users see almost no
+     downtime.
+
+  2. **It can grow and shrink.** When many users come, Kubernetes
+     adds more copies of your app. When users go away, it removes
+     copies to save money.
+
+  3. **It works the same everywhere.** Your laptop, a small server,
+     or a big cloud — same tool, same commands, same YAML files.
+
+  Before Kubernetes, teams did all this by hand. They wrote scripts
+  and hoped nothing broke at night. Kubernetes does the boring work
+  for them.
+task: |
+  No task. Just read and press Enter.
+check:
+  type: manual

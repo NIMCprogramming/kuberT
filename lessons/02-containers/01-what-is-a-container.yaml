@@ -1,0 +1,30 @@
+id: 02-containers/01-what-is-a-container
+title: "What is a container?"
+module: containers
+order: 1
+estimated_minutes: 6
+intro: |
+  # What is a container?
+
+  A **container** is a small box that holds:
+  - your app (the code that runs)
+  - the libraries your app needs
+  - the settings, like environment variables
+
+  You build the container once. Then it runs the same way on
+  any computer with Docker or another container tool.
+
+  **Why is this useful?**
+  Before containers, people said *"it works on my machine"*.
+  On other machines, the app broke. Different Linux, different
+  libraries, different version of Python — many small problems.
+
+  A container fixes this. Everything the app needs is inside the
+  box. The computer only needs to know how to open the box.
+
+  Kubernetes runs containers. So before you can use Kubernetes,
+  you must know what a container is.
+task: |
+  No task. Just read. Press Enter.
+check:
+  type: manual

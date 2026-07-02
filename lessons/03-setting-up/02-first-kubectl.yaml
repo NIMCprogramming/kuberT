@@ -1,0 +1,43 @@
+id: 03-setting-up/02-first-kubectl
+title: "Your first kubectl commands"
+module: setting-up
+order: 2
+estimated_minutes: 8
+intro: |
+  # kubectl
+
+  `kubectl` is the tool you use to talk to Kubernetes. You will
+  type it hundreds of times, so it is good to learn the basic
+  shape:
+
+  ```
+  kubectl <verb> <resource> [name] [flags]
+  ```
+
+  Examples:
+  - `kubectl get pods` — show all Pods.
+  - `kubectl get nodes` — show all computers in the cluster.
+  - `kubectl describe pod hello` — show all details about the Pod
+    named `hello`.
+  - `kubectl delete pod hello` — remove that Pod.
+
+  Two very useful flags:
+  - `-n <namespace>` — talk to a specific namespace (default is
+    `default`).
+  - `-o wide` or `-o yaml` — show more info.
+task: |
+  In another terminal, list the nodes of your cluster:
+
+  ```
+  kubectl get nodes
+  ```
+
+  You should see at least one node with status **Ready**. Then
+  press `c` here.
+hint: "kubectl get nodes -o wide  -- shows the IP and container runtime too"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get nodes --no-headers"
+  expect: "Ready"
+  timeout_seconds: 15

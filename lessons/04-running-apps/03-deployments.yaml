@@ -1,0 +1,48 @@
+id: 04-running-apps/03-deployments
+title: "Deployments"
+module: running-apps
+order: 3
+estimated_minutes: 12
+intro: |
+  # Deployments
+
+  A **Deployment** is the tool you use most of the time to run
+  apps on Kubernetes.
+
+  A Deployment:
+  - makes a ReplicaSet for you (you saw ReplicaSets last lesson)
+  - keeps the wanted number of Pods alive
+  - lets you **update** the image safely, one Pod at a time
+  - lets you **roll back** to the old version if the new one
+    breaks
+
+  So the chain is: **Deployment → ReplicaSet → Pods**.
+
+  You will use Deployments in almost every real project.
+task: |
+  Create a Deployment named `web` with **2 copies** of `nginx`.
+
+  In another terminal:
+
+  ```
+  kubectl create deployment web --image=nginx --replicas=2
+  ```
+
+  Wait until both Pods are ready:
+
+  ```
+  kubectl get deploy web
+  ```
+
+  Then press `c`.
+
+  To update the image later: `kubectl set image deploy/web nginx=nginx:1.27`
+  To roll back:              `kubectl rollout undo deploy/web`
+  To clean up:               `kubectl delete deploy web`
+hint: "Look for READY 2/2 in kubectl get deploy web"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get deploy web -o jsonpath='{.status.readyReplicas}'"
+  expect: "2"
+  timeout_seconds: 90

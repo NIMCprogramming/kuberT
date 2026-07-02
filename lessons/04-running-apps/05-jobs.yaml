@@ -1,0 +1,42 @@
+id: 04-running-apps/05-jobs
+title: "Jobs and CronJobs"
+module: running-apps
+order: 5
+estimated_minutes: 10
+intro: |
+  # Jobs
+
+  A **Job** runs a Pod that **does the work once and then stops**.
+  Great for:
+  - one-time database migrations
+  - sending an email batch
+  - a data import
+
+  A Deployment says: *"keep this Pod running forever".*
+  A Job says: *"run this Pod until it is done, then stop".*
+
+  A **CronJob** is a Job on a schedule (like Linux `cron`). It runs
+  every day at 03:00, every hour, and so on.
+task: |
+  Run a Job that prints `hello` and exits.
+
+  ```
+  kubectl create job hello --image=busybox -- echo hello
+  ```
+
+  Wait a few seconds. Then check that the Job finished:
+
+  ```
+  kubectl get job hello
+  ```
+
+  You should see **COMPLETIONS 1/1**. Then press `c`.
+
+  Clean up with: `kubectl delete job hello`
+hint: "kubectl logs job/hello  -- see the 'hello' output from the Pod"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get job hello -o jsonpath='{.status.succeeded}'"
+  expect: "1"
+  timeout_seconds: 60

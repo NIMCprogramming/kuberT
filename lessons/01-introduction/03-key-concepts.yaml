@@ -1,0 +1,30 @@
+id: 01-introduction/03-key-concepts
+title: "Key Kubernetes words"
+module: introduction
+order: 3
+estimated_minutes: 6
+intro: |
+  # Key words
+
+  You will hear these words a lot. Learn them now.
+
+  - **Cluster** — a group of computers that work as one. You send
+    commands to the cluster, not to one computer.
+  - **Node** — one computer inside the cluster. A cluster has many
+    nodes.
+  - **Pod** — the smallest unit. A Pod runs one container (or a few
+    that must stay together).
+  - **Container** — your app plus everything it needs to run, packed
+    into one small box.
+  - **Control plane** — the brain of the cluster. It decides where
+    Pods run and keeps them alive.
+  - **kubectl** — the command you type to talk to the cluster. Say
+    it like *"kube-control"* or *"kube-cuddle"*.
+  - **YAML** — a text file that tells Kubernetes what you want. You
+    do not tell it *how* to do it; only *what* you want.
+
+  You will use each of these in later lessons.
+task: |
+  No task. Press Enter to finish.
+check:
+  type: manual

@@ -1,0 +1,37 @@
+id: 03-setting-up/01-local-cluster-with-kind
+title: "A local cluster with Kind"
+module: setting-up
+order: 1
+estimated_minutes: 8
+intro: |
+  # A local cluster with Kind
+
+  A real Kubernetes cluster needs many computers. Beginners don't
+  have that. So we use **Kind** — *Kubernetes IN Docker*.
+
+  Kind runs the whole cluster inside one Docker container. It is
+  slower than a real cluster, but great for learning.
+
+  This app already made a Kind cluster for you when you ran
+  `make run` (or `kubert init`).
+
+  In this lesson you will look at the cluster and see that it is
+  alive.
+task: |
+  In another terminal, run:
+
+  ```
+  kubectl cluster-info
+  ```
+
+  You should see a line like *"Kubernetes control plane is running
+  at https://127.0.0.1:..."*.
+
+  Then come back and press `c`.
+hint: "If you see 'The connection was refused', the cluster is not up. From the menu, pick 'Check tools / create cluster'."
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl cluster-info"
+  expect: "control plane is running"
+  timeout_seconds: 15
