@@ -2,7 +2,7 @@ id: 08-resources/01-requests-limits
 title: "Requests and Limits"
 module: resources
 order: 1
-estimated_minutes: 12
+estimated_minutes: 15
 intro: |
   # CPU and memory: requests and limits
 
@@ -14,20 +14,47 @@ intro: |
   - **Limit** — the **max** the container can use. Above the CPU
     limit, the container is *throttled* (it just runs slower).
     Above the memory limit, Kubernetes **kills the container**
-    (OOMKilled) and starts it again.
+    (status `OOMKilled`) and starts it again.
 
-  Units:
-  - CPU: `1` = one full core. `500m` = half a core (m = milli).
-  - Memory: `128Mi`, `1Gi`, `500Mi` (Mi and Gi are base-1024).
+  Think of it like renting a room:
+  - Request = "give me at least this much space to live in".
+  - Limit = "I promise not to spread out more than this".
 
-  **Advice:** always set a request. Often set a limit too, but keep
-  it a bit above the real peak so the app is not killed for a
-  short spike.
+  ## Units
+
+  **CPU**
+  - `1` = one full CPU core.
+  - `500m` = half a core (`m` = *milli*, one thousandth).
+  - `100m` = 10% of one core.
+
+  **Memory**
+  - `Mi` and `Gi` are base-1024 (mebibytes, gibibytes). `128Mi`,
+    `1Gi`, `2Gi`.
+  - `M` and `G` are base-1000 (rare — try to always use `Mi`/`Gi`).
+
+  ## Break the YAML apart
+
+  ```yaml
+  resources:
+    requests:
+      cpu:    50m       # I need at least 50 millicores
+      memory: 32Mi      # I need at least 32 MiB
+    limits:
+      cpu:    200m      # do not let me use more than 200 mCPU
+      memory: 128Mi     # kill me if I go above 128 MiB
+  ```
+
+  **Advice:** always set a request. Often set a limit too, but
+  keep the limit a bit above the real peak so the app is not
+  killed on a short spike.
+
 task: |
-  Make a Pod that asks for a tiny amount of CPU and memory.
+  You will do three steps.
+
+  ### Step 1 — make a Pod with resource settings
 
   ```
-  cat <<EOF | kubectl apply -f -
+  cat <<'EOF' | kubectl apply -f -
   apiVersion: v1
   kind: Pod
   metadata:
@@ -42,15 +69,41 @@ task: |
   EOF
   ```
 
-  Wait until it is Running:
+  ### Step 2 — see the numbers Kubernetes stored
+
+  Read one field with `jsonpath`:
+  ```
+  kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources}'
+  echo
+  ```
+
+  Or read them from `describe` (nicer to see):
+  ```
+  kubectl describe pod sizer | grep -A4 'Requests\|Limits'
+  ```
+
+  ### Step 3 — check
 
   ```
   kubectl get pod sizer
   ```
 
-  Then press `c`.
+  When STATUS is `Running`, press `c`.
 
-  Clean up: `kubectl delete pod sizer`
+  Clean up later:
+  ```
+  kubectl delete pod sizer
+  ```
+
+  ## Bonus — try to break it (optional)
+
+  Set an impossibly high request (like `cpu: 500`) and re-apply.
+  The Pod goes `Pending` because no node has 500 cores. Look at
+  the reason:
+  ```
+  kubectl describe pod sizer | grep -A2 Events
+  ```
+  You will see `FailedScheduling`.
 hint: "kubectl describe pod sizer  -- see the Requests/Limits section"
 requires: [cluster]
 check:

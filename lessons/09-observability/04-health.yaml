@@ -2,7 +2,7 @@ id: 09-observability/04-health
 title: "Probes: liveness, readiness, startup"
 module: observability
 order: 4
-estimated_minutes: 10
+estimated_minutes: 15
 intro: |
   # Health probes
 
@@ -10,28 +10,119 @@ intro: |
 
   Three types:
 
-  - **Liveness probe** — *"is the app still alive?"* If it fails,
-    Kubernetes **restarts the container**.
+  - **Liveness probe** — *"is the app still alive?"* If it fails
+    (many times in a row), Kubernetes **restarts the container**.
   - **Readiness probe** — *"is the app ready to serve traffic?"*
-    If it fails, the Pod is removed from the Service (no traffic)
-    but not restarted.
+    If it fails, the Pod is **removed from the Service** (no
+    traffic) but not restarted.
   - **Startup probe** — *"has the app finished starting?"* Used
-    for slow-start apps. While it runs, liveness is not checked.
+    for slow-start apps. While the startup probe is running,
+    liveness is paused so a slow boot does not cause a restart.
 
-  Each probe can be:
-  - `httpGet` (a URL returns 2xx or 3xx)
-  - `tcpSocket` (a port accepts a TCP connection)
-  - `exec` (a command inside the container exits 0)
+  ## Probe types
+
+  Each probe can be one of:
+  - `httpGet` — a URL returns 2xx or 3xx.
+  - `tcpSocket` — a port accepts a TCP connection.
+  - `exec` — a command inside the container exits `0`.
+
+  ## Break the fields apart
+
+  ```yaml
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 0   # wait N seconds before the first probe
+    periodSeconds:      5    # run the probe every 5 seconds
+    timeoutSeconds:     1    # each probe must answer in 1 s
+    failureThreshold:   3    # need N failures in a row to fail
+    successThreshold:   1    # N successes in a row to pass
+  ```
 
   **Good defaults:**
   - Always add a readiness probe.
-  - Add a liveness probe if the app can hang.
-  - Use a startup probe for apps that take a long time to boot.
+  - Add a liveness probe if the app can **hang** (deadlock, stuck
+    thread).
+  - Use a startup probe for apps that take a long time to boot
+    (Java, big databases).
+
+  ## Warning about liveness
+
+  A too-strict liveness probe can cause **restart loops**. If your
+  app takes 30 s to start but the probe fails after 10 s,
+  Kubernetes will restart it forever. Use a startup probe or a
+  higher `initialDelaySeconds` for that case.
+
 task: |
-  Add a simple HTTP readiness probe to a Pod running nginx.
+  You will do three steps.
+
+  ### Step 1 — make a Pod with a readiness probe
 
   ```
-  cat <<EOF | kubectl apply -f -
+  cat <<'EOF' | kubectl apply -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: healthy
+  spec:
+    containers:
+      - name: c
+        image: nginx
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          periodSeconds: 5
+  EOF
+  ```
+
+  ### Step 2 — watch it become Ready
+
+  ```
+  kubectl get pod healthy -w
+  ```
+
+  READY goes from `0/1` to `1/1`. Press `Ctrl+C` to stop.
+
+  Read only the ready flag:
+  ```
+  kubectl get pod healthy -o jsonpath='{.status.containerStatuses[0].ready}'
+  echo
+  ```
+
+  Should print `true`.
+
+  ### Step 3 — see what a failed probe looks like (bonus)
+
+  Change the port to something wrong (`999`) — the probe will
+  fail forever and READY will stay `0/1`:
+  ```
+  kubectl delete pod healthy
+  cat <<'EOF' | kubectl apply -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: healthy
+  spec:
+    containers:
+      - name: c
+        image: nginx
+        readinessProbe:
+          httpGet: { path: /, port: 999 }
+          periodSeconds: 3
+  EOF
+  ```
+
+  Look at the events:
+  ```
+  kubectl describe pod healthy | grep -A2 Readiness
+  ```
+
+  Then fix it (put the port back to `80`) so the check passes:
+  ```
+  kubectl delete pod healthy
+  cat <<'EOF' | kubectl apply -f -
   apiVersion: v1
   kind: Pod
   metadata:
@@ -46,16 +137,13 @@ task: |
   EOF
   ```
 
-  Wait until the Pod is Ready:
+  When ready, press `c`.
 
+  Clean up:
   ```
-  kubectl get pod healthy
+  kubectl delete pod healthy
   ```
-
-  You should see READY `1/1`. Then press `c`.
-
-  Clean up: `kubectl delete pod healthy`
-hint: "kubectl describe pod healthy  -- see the probe near the bottom"
+hint: "kubectl describe pod healthy  -- see 'Readiness probe failed' events for the bad-port version"
 requires: [cluster]
 check:
   type: command

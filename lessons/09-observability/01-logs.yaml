@@ -2,48 +2,90 @@ id: 09-observability/01-logs
 title: "Logs"
 module: observability
 order: 1
-estimated_minutes: 8
+estimated_minutes: 12
 intro: |
   # Logs
 
   When your app writes to **stdout** or **stderr** inside a
-  container, Kubernetes saves that text as **logs**.
+  container, Kubernetes saves that text as **logs**. You read
+  them with `kubectl logs`.
 
-  You read logs with:
+  For big projects, teams ship logs to a central tool: **Loki**,
+  **Elasticsearch**, or a cloud service. A small agent on each
+  node reads the log files from disk and sends them onward.
+
+  ## Break `kubectl logs` apart
 
   ```
-  kubectl logs <pod-name>
+  kubectl logs POD_OR_DEPLOY [FLAGS]
   ```
+
+  Common targets:
+  - `web-abc123` — the exact Pod name.
+  - `deploy/web` — the Deployment. `kubectl` picks one of its Pods.
+  - `job/hello` — a Job's Pod.
 
   Useful flags:
-  - `-f` — follow (stream new lines as they come). Like `tail -f`.
-  - `--previous` — see logs from the last crashed container.
-  - `-c <name>` — pick a container inside a multi-container Pod.
-  - `--tail=100` — only the last 100 lines.
+  - `-f` — **follow**. Stream new lines as they appear (like
+    `tail -f`). Press `Ctrl+C` to stop.
+  - `--previous` — logs from the **previous container** in this
+    Pod. Useful after a crash-restart.
+  - `-c NAME` — pick a container inside a multi-container Pod.
+  - `--tail=100` — only the last 100 lines (default: all).
+  - `--since=5m` or `--since-time=2025-01-01T00:00:00Z` — recent
+    logs only.
+  - `--all-containers` — logs from every container in the Pod.
+  - `--timestamps` — add a timestamp to every line.
 
-  For big projects, teams send logs to a central tool:
-  **Loki**, **Elasticsearch**, or a cloud logging service. Each
-  node runs a small agent that ships logs from the container files.
-
-  This lesson uses `kubectl logs` on your local cluster.
 task: |
-  If you don't have a `web` Deployment, make one:
+  You will use three of these flags on a real Pod.
+
+  ### Step 1 — make sure a Deployment exists
 
   ```
   kubectl create deployment web --image=nginx --replicas=1
   ```
 
-  Then read its logs:
+  Wait until `kubectl get deploy web` shows READY `1/1`.
 
+  ### Step 2 — read logs in different ways
+
+  Just print the current logs:
   ```
   kubectl logs deploy/web
   ```
 
-  You should see nginx start-up lines. Then press `c`.
-hint: "kubectl logs -f deploy/web  -- stream logs live"
+  Last 5 lines only:
+  ```
+  kubectl logs deploy/web --tail=5
+  ```
+
+  Follow live (open a **second** terminal at the same time):
+  ```
+  kubectl logs -f deploy/web
+  ```
+
+  In another terminal, generate a log line by calling the app:
+  ```
+  kubectl run pinger --rm -it --restart=Never --image=curlimages/curl -- \
+    curl -s http://web
+  ```
+
+  You should see a new access-log line in the follow window.
+  Press `Ctrl+C` there to stop.
+
+  ### Step 3 — check
+
+  Press `c`. The check just confirms the Deployment is ready.
+
+  Clean up later:
+  ```
+  kubectl delete deploy web
+  ```
+hint: "kubectl logs deploy/web --previous  -- shows the last logs after a crash-restart"
 requires: [cluster]
 check:
   type: command
   cmd: "kubectl get deploy web -o jsonpath='{.status.readyReplicas}'"
   expect: "1"
-  timeout_seconds: 60
+  timeout_seconds: 90
