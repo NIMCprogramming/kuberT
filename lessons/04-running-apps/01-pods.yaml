@@ -2,7 +2,7 @@ id: 04-running-apps/01-pods
 title: "Your first Pod"
 module: running-apps
 order: 1
-estimated_minutes: 12
+estimated_minutes: 15
 intro: |
   # Pods
 
@@ -17,83 +17,79 @@ intro: |
 
   Most Pods in real life have only one container.
 
-  ## The `kubectl run` command
+  ## Two ways to make a Pod
 
+  **1. Imperative — one command:**
   ```
-  kubectl run hello --image=nginx
+  kubectl run POD_NAME --image=IMAGE [--restart=Never] [--port=N] [--env=K=V]
   ```
-  - `hello` — the **Pod name**.
-  - `--image=nginx` — the container image (looked up on Docker Hub).
 
-  Small but important extra flags:
-  - `--restart=Never` — do not restart on exit (make a plain Pod,
-    not a Deployment).
-  - `--port=80` — say which port the container listens on
-    (informational; does not expose it outside).
-  - `--env=KEY=VALUE` — add an env var to the container.
-  - `--rm -it` — remove the Pod when it exits, and give an
-    interactive terminal.
+  **2. Declarative — from YAML:**
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: POD_NAME
+    labels: { app: web }
+  spec:
+    containers:
+      - name: c
+        image: IMAGE
+        ports:
+          - containerPort: 80
+  ```
+  Then: `kubectl apply -f my-pod.yaml`
 
   ## What can you do with a Pod?
 
-  Once the Pod is running, you can:
-  - **read its logs**: `kubectl logs hello`
-  - **run a command inside it**: `kubectl exec -it hello -- sh`
-  - **see its IP inside the cluster**: `kubectl get pod hello -o wide`
-  - **delete it**: `kubectl delete pod hello`
-
-  You will use all four in this task.
+  - **logs**: `kubectl logs <pod>`
+  - **shell inside**: `kubectl exec -it <pod> -- sh`
+  - **see internal IP**: `kubectl get pod <pod> -o wide`
+  - **delete**: `kubectl delete pod <pod>`
 
 task: |
-  You will do three steps:
-  1. Create a Pod.
-  2. Look inside it (logs and a shell).
-  3. Confirm the Pod is `Running`.
+  **Your goal:** build a Pod from YAML (not `kubectl run`),
+  then inspect it.
 
-  ### Step 1 — create the Pod
+  Requirements:
+  1. Write and apply a Pod with these properties:
+     - name: **`hello`**
+     - one container using image **`nginx`**
+     - the container's port **80** declared in `containerPort`
+     - a label **`app: hello`**
+  2. Wait until STATUS is `Running`.
+  3. Read the logs.
+  4. Confirm the Pod really has label `app=hello`:
+     ```
+     kubectl get pods -l app=hello
+     ```
 
-  ```
-  kubectl run hello --image=nginx
-  ```
+  Then press `c`.
 
-  Wait a few seconds for the image to download.
-
-  ### Step 2 — look inside
-
-  Read the nginx start-up logs:
-  ```
-  kubectl logs hello
-  ```
-
-  Open a shell **inside** the container:
-  ```
-  kubectl exec -it hello -- sh
-  ```
-
-  Inside the shell, try `ls`, `hostname`, then `exit` to leave.
-
-  See where the Pod is running and its cluster-internal IP:
-  ```
-  kubectl get pod hello -o wide
-  ```
-
-  ### Step 3 — check
-
-  Confirm the Pod status is `Running`:
-  ```
-  kubectl get pod hello
-  ```
-
-  When STATUS is `Running`, press `c`.
-
-  Clean up later with:
-  ```
-  kubectl delete pod hello
-  ```
-hint: "kubectl describe pod hello  -- see all events, image pull steps, and the assigned node"
+  Clean up later: delete the Pod.
+hint: |
+  - Save the YAML to a file (e.g. `hello.yaml`) and run `kubectl apply -f hello.yaml`.
+  - Or paste it inline with a heredoc:
+    ```
+    cat <<'EOF' | kubectl apply -f -
+    apiVersion: v1
+    kind: Pod
+    ...
+    EOF
+    ```
+  - Fields to fill: `metadata.name`, `metadata.labels`, `spec.containers[0].image`, `spec.containers[0].ports[0].containerPort`.
+  - Verify labels: `kubectl get pod hello --show-labels`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get pod hello -o jsonpath='{.status.phase}'"
-  expect: "Running"
-  timeout_seconds: 60
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get pod hello -o jsonpath='{.status.phase}'"
+      expect: "Running"
+      timeout_seconds: 60
+    - type: command
+      cmd: "kubectl get pod hello -o jsonpath='{.metadata.labels.app}'"
+      expect: "hello"
+    - type: command
+      cmd: "kubectl get pod hello -o jsonpath='{.spec.containers[0].ports[0].containerPort}'"
+      expect: "80"

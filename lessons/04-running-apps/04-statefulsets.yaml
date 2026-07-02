@@ -2,97 +2,76 @@ id: 04-running-apps/04-statefulsets
 title: "StatefulSets"
 module: running-apps
 order: 4
-estimated_minutes: 15
+estimated_minutes: 18
 intro: |
   # StatefulSets
 
   A **StatefulSet** is like a Deployment, but for apps that must
-  remember data — like databases (Postgres, MySQL, MongoDB).
+  remember data — like databases.
 
   Key differences from a Deployment:
   - Pods get **stable names**: `db-0`, `db-1`, `db-2`. Names do
     not change if a Pod restarts.
   - Pods start **in order**: `db-0` first, then `db-1`, then `db-2`.
-  - Each Pod can get its **own disk** (a PVC created from a
-    `volumeClaimTemplates`).
-  - A **headless Service** gives each Pod its own DNS name
-    (`db-0.db`, `db-1.db`, ...). We will build the PVC part in the
-    storage module; here we only test the stable-name part.
+  - Each Pod can get its **own disk** (storage lessons cover this).
+  - Uses a **headless Service** for stable DNS names.
 
-  A Deployment says: *"give me 3 web servers, any names are OK".*
-  A StatefulSet says: *"give me 3 Pods called db-0, db-1, db-2,
-  in that order".*
+  ## Two extra fields vs a Deployment
 
-  ## Two key extra fields
-
-  A StatefulSet YAML has two things a Deployment does not:
   ```yaml
-  spec:
-    serviceName: web-ss    # matches the headless Service name
-    ...
-    # volumeClaimTemplates:  # (used later, for real DBs)
-  ```
-
-  `serviceName` links the StatefulSet to a **headless Service**
-  (a Service with `clusterIP: None`) so DNS names like
-  `web-ss-0.web-ss` work.
-
-task: |
-  You will do three steps.
-
-  ### Step 1 — create
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
   apiVersion: apps/v1
   kind: StatefulSet
   metadata:
-    name: web-ss
+    name: NAME
   spec:
-    serviceName: web-ss
-    replicas: 2
+    serviceName: NAME               # matches the headless Service name
+    replicas: N
     selector:
-      matchLabels: { app: web-ss }
-    template:
+      matchLabels: { app: NAME }
+    template:                        # Pod recipe (same as Deployment)
       metadata:
-        labels: { app: web-ss }
+        labels: { app: NAME }
       spec:
         containers:
-          - name: nginx
-            image: nginx
-  EOF
+          - name: c
+            image: IMAGE
+    # volumeClaimTemplates: [...]    # per-Pod disks (later lesson)
   ```
 
-  ### Step 2 — see the stable, ordered names
+task: |
+  **Your goal:** build a StatefulSet and see stable Pod names.
 
-  ```
-  kubectl get pods -l app=web-ss
-  ```
+  Requirements:
+  1. Create a **StatefulSet** named **`cache`** with:
+     - **3 replicas**
+     - image **`nginx`**
+     - selector and template labels: **`app: cache`**
+     - `serviceName: cache`
+  2. Wait until READY is `3/3`.
+  3. Confirm the Pod names are **exactly** `cache-0`, `cache-1`,
+     and `cache-2` — not random strings.
+  4. **Delete Pod `cache-1`** (only that one). Wait a few seconds.
+  5. Confirm it comes back with the **same name** `cache-1`.
+  6. Press `c`.
 
-  You should see exactly `web-ss-0` and `web-ss-1` — never random
-  strings. Now delete one:
-  ```
-  kubectl delete pod web-ss-0
-  ```
-
-  Watch it come back with the **same** name:
-  ```
-  kubectl get pods -l app=web-ss -w
-  ```
-  (Press `Ctrl+C` to stop watching.)
-
-  ### Step 3 — check
-
-  When both Pods are Ready again, press `c`.
-
-  Clean up later:
-  ```
-  kubectl delete statefulset web-ss
-  ```
-hint: "kubectl get statefulset web-ss  -- watch READY reach 2/2"
+  Clean up later: delete the StatefulSet.
+hint: |
+  - Apply YAML with a heredoc or file. `kubectl create` does not support StatefulSet directly.
+  - You do NOT need to create the headless Service for the Pod names to be stable — `serviceName` is enough (DNS won't work without the Service, but this task doesn't need DNS).
+  - List Pods: `kubectl get pods -l app=cache`.
+  - Delete one: `kubectl delete pod cache-1`.
+  - Watch it re-appear: `kubectl get pod cache-1 -w`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get statefulset web-ss -o jsonpath='{.status.readyReplicas}'"
-  expect: "2"
-  timeout_seconds: 120
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get statefulset cache -o jsonpath='{.spec.replicas}'"
+      expect: "3"
+    - type: command
+      cmd: "kubectl get statefulset cache -o jsonpath='{.status.readyReplicas}'"
+      expect: "3"
+      timeout_seconds: 180
+    - type: command
+      cmd: "kubectl get pod cache-2 -o jsonpath='{.metadata.name}'"
+      expect: "cache-2"

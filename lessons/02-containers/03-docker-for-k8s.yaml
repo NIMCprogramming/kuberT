@@ -2,7 +2,7 @@ id: 02-containers/03-docker-for-k8s
 title: "Docker and Kubernetes"
 module: containers
 order: 3
-estimated_minutes: 8
+estimated_minutes: 10
 intro: |
   # Docker and Kubernetes
 
@@ -12,36 +12,40 @@ intro: |
 
   Kubernetes does **not** need Docker to run. It uses something
   called a **container runtime**. Popular runtimes:
-  - **containerd** (the one under the hood in most clusters today)
+  - **containerd** (used inside most clusters today)
   - **CRI-O**
 
   But you can still use Docker to *build* the image. The image
   format is the same. Kubernetes just picks it up and runs it.
 
   In this project, `kind` uses **containerd** inside its node
-  container. You do not need Docker to make images for these
-  lessons — we will use images that are already on Docker Hub,
-  like `nginx`.
+  container.
 
-  **The short version:**
-  - Build images with Docker (or with `podman`, `buildah`, ...).
-  - Push images to a registry (like Docker Hub).
-  - Kubernetes pulls the image and runs it.
+  ## Example (reference only)
+
+  ```
+  docker version           # print client and server versions
+  docker info              # runtime, storage driver, etc.
+  docker ps                # list running containers
+  docker images            # list local images
+  ```
 task: |
-  Check that Docker works on your machine.
+  **Your goal:** confirm Docker is installed AND running on your
+  machine.
 
-  In another terminal, type:
+  Steps you must find yourself:
+  1. Run a command that prints the Docker **server** version.
+  2. If you see *"Cannot connect to the Docker daemon"*, Docker
+     is installed but not running. Start it, then try again.
+  3. Also list any running containers (you should at least see the
+     `kind` cluster's node container).
 
-  ```
-  docker version
-  ```
-
-  You should see a version number for **Client** and **Server**.
-  If you see an error like *"Cannot connect to the Docker daemon"*,
-  Docker is not running. Start it, then try again.
-
-  When it works, come back and press `c`.
-hint: "If the command hangs, run: sudo systemctl start docker"
+  When both work, press `c`.
+hint: |
+  - Server version: `docker version`. Look at the "Server" section.
+  - If Docker is not running on Ubuntu: `sudo systemctl start docker`.
+  - Running containers: `docker ps`.
+  - You should see a container named like `kubert-control-plane` (the kind node).
 check:
   type: command
   cmd: "docker version --format '{{.Server.Version}}'"

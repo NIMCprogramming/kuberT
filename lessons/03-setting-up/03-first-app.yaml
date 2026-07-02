@@ -2,43 +2,46 @@ id: 03-setting-up/03-first-app
 title: "Your first app on the cluster"
 module: setting-up
 order: 3
-estimated_minutes: 10
+estimated_minutes: 12
 intro: |
   # Your first app
 
   Time to run something on your cluster. The simplest app is
   **nginx** — a small web server.
 
-  You will:
-  1. Start an nginx container as a Pod.
-  2. Wait for it to be **Running**.
-  3. Delete it when you are done.
+  Real projects use **Deployments** (later lesson), but a plain
+  Pod is enough for a first try.
 
-  Real apps use **Deployments** (later lesson), but for the very
-  first time a Pod is enough.
+  ## Example (reference)
+
+  ```
+  kubectl run POD_NAME --image=IMAGE [--restart=Never] [--env=K=V]
+  kubectl get pod POD_NAME
+  kubectl logs POD_NAME
+  kubectl exec -it POD_NAME -- sh
+  kubectl delete pod POD_NAME
+  ```
 task: |
-  In another terminal, create the Pod:
+  **Your goal:** run your first Pod, look inside it, and clean up.
 
-  ```
-  kubectl run web --image=nginx
-  ```
+  Requirements:
+  1. Create a Pod named **`hello-web`** using image **`nginx`**.
+  2. Wait until STATUS is `Running`.
+  3. Read the nginx start-up **logs**.
+  4. Open a **shell inside** the container and run `hostname` and
+     `ls /usr/share/nginx/html`. Then leave the shell (`exit`).
+  5. Confirm STATUS is still `Running`, then press `c`.
 
-  Wait about ten seconds. Then check:
-
-  ```
-  kubectl get pod web
-  ```
-
-  When STATUS is **Running**, come back here and press `c`.
-
-  When you finish this module, you can clean up with:
-  ```
-  kubectl delete pod web
-  ```
-hint: "kubectl get pod web -o wide  -- shows the internal IP too"
+  When done with the lesson, delete the Pod.
+hint: |
+  - Create: `kubectl run <name> --image=<image>` (default is a Deployment-less Pod).
+  - Wait: `kubectl get pod <name> -w` (Ctrl+C to stop).
+  - Logs: `kubectl logs <name>`.
+  - Shell: `kubectl exec -it <name> -- sh`  (the `--` separates kubectl flags from the command).
+  - Delete: `kubectl delete pod <name>`.
 requires: [cluster]
 check:
   type: command
-  cmd: "kubectl get pod web -o jsonpath='{.status.phase}'"
+  cmd: "kubectl get pod hello-web -o jsonpath='{.status.phase}'"
   expect: "Running"
   timeout_seconds: 60

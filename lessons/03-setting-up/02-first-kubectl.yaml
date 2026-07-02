@@ -2,39 +2,71 @@ id: 03-setting-up/02-first-kubectl
 title: "Your first kubectl commands"
 module: setting-up
 order: 2
-estimated_minutes: 8
+estimated_minutes: 12
 intro: |
   # kubectl
 
-  `kubectl` is the tool you use to talk to Kubernetes. You will
-  type it hundreds of times, so it is good to learn the basic
-  shape:
+  `kubectl` is the tool you use to talk to Kubernetes. The shape:
 
   ```
   kubectl <verb> <resource> [name] [flags]
   ```
 
-  Examples:
-  - `kubectl get pods` — show all Pods.
-  - `kubectl get nodes` — show all computers in the cluster.
-  - `kubectl describe pod hello` — show all details about the Pod
-    named `hello`.
-  - `kubectl delete pod hello` — remove that Pod.
+  ## Common verbs
 
-  Two very useful flags:
-  - `-n <namespace>` — talk to a specific namespace (default is
+  - `get` — list resources (short form).
+  - `describe` — long human-readable view of one resource.
+  - `create` — make a new resource (with a name and image).
+  - `apply` — send YAML to the cluster (create or update).
+  - `delete` — remove a resource.
+  - `logs` — read Pod logs.
+  - `exec` — run a command inside a container.
+
+  ## Common resources
+
+  Every resource has short and long names:
+  - `pods` / `pod` / `po`
+  - `nodes` / `node` / `no`
+  - `services` / `service` / `svc`
+  - `deployments` / `deployment` / `deploy`
+  - `configmaps` / `configmap` / `cm`
+
+  See them all:
+  ```
+  kubectl api-resources
+  ```
+
+  ## Two very useful flags
+
+  - `-n <namespace>` — talk to a specific namespace (default:
     `default`).
-  - `-o wide` or `-o yaml` — show more info.
+  - `-o wide` / `-o yaml` / `-o json` — richer output formats.
+
+  ## Example (reference)
+
+  ```
+  kubectl get pods                       # in namespace 'default'
+  kubectl get pods -A                    # in ALL namespaces
+  kubectl get nodes -o wide              # nodes + IPs + OS + runtime
+  kubectl describe node <node-name>      # everything about a node
+  ```
 task: |
-  In another terminal, list the nodes of your cluster:
+  **Your goal:** explore the cluster with kubectl.
 
-  ```
-  kubectl get nodes
-  ```
+  Find and run commands that answer these:
+  1. How many **nodes** does the cluster have, and are they all
+     `Ready`?
+  2. What **image** is on the first node (hint: it is a
+     `kindest/node:...` image)?
+  3. What is the internal IP of the node?
+  4. List all Pods in **every** namespace (there are already many
+     system Pods in `kube-system`).
 
-  You should see at least one node with status **Ready**. Then
-  press `c` here.
-hint: "kubectl get nodes -o wide  -- shows the IP and container runtime too"
+  Then press `c`.
+hint: |
+  - Question 1: `kubectl get nodes` — column STATUS.
+  - Question 2 and 3: `kubectl get nodes -o wide`, or `kubectl describe node <name>`.
+  - Question 4: `kubectl get pods -A` (or `--all-namespaces`).
 requires: [cluster]
 check:
   type: command

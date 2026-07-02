@@ -2,7 +2,7 @@ id: 03-setting-up/01-local-cluster-with-kind
 title: "A local cluster with Kind"
 module: setting-up
 order: 1
-estimated_minutes: 8
+estimated_minutes: 10
 intro: |
   # A local cluster with Kind
 
@@ -15,20 +15,28 @@ intro: |
   This app already made a Kind cluster for you when you ran
   `make run` (or `kubert init`).
 
-  In this lesson you will look at the cluster and see that it is
-  alive.
+  ## Example commands (reference)
+
+  ```
+  kind get clusters                # list your kind clusters
+  kubectl cluster-info             # is the cluster alive?
+  kubectl version                  # kubectl and server version
+  kubectl config current-context   # which cluster kubectl talks to
+  ```
 task: |
-  In another terminal, run:
+  **Your goal:** prove the cluster is alive.
 
-  ```
-  kubectl cluster-info
-  ```
+  Find and run commands that answer these three questions:
+  1. Is there a kind cluster on this machine? What is its name?
+  2. Is the Kubernetes API reachable? (a URL should appear)
+  3. Which "context" is kubectl using right now?
 
-  You should see a line like *"Kubernetes control plane is running
-  at https://127.0.0.1:..."*.
-
-  Then come back and press `c`.
-hint: "If you see 'The connection was refused', the cluster is not up. From the menu, pick 'Check tools / create cluster'."
+  When you can answer all three, press `c`.
+hint: |
+  - Question 1: `kind get clusters`
+  - Question 2: `kubectl cluster-info` — look for *"Kubernetes control plane is running at ..."*
+  - Question 3: `kubectl config current-context` — the current context is a link between kubectl and one cluster.
+  - If cluster-info hangs or fails, from the main menu pick "Check tools / create cluster".
 requires: [cluster]
 check:
   type: command

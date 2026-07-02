@@ -2,7 +2,7 @@ id: 04-running-apps/05-jobs
 title: "Jobs and CronJobs"
 module: running-apps
 order: 5
-estimated_minutes: 12
+estimated_minutes: 15
 intro: |
   # Jobs
 
@@ -17,86 +17,54 @@ intro: |
 
   A **CronJob** is a Job on a schedule (like Linux `cron`).
 
-  ## Break `kubectl create job` apart
+  ## When is a Job "done"?
+
+  A Job counts a Pod as done when the container exits with code
+  `0`. If it exits non-zero, the Job retries (up to
+  `backoffLimit` times, default 6).
+
+  ## Example (reference)
 
   ```
-  kubectl create job hello --image=busybox -- echo hello
+  kubectl create job NAME --image=IMAGE -- COMMAND ARGS
   ```
-  - `job` — the resource kind.
-  - `hello` — the Job name.
-  - `--image=busybox` — the container image.
-  - `--` — end of `kubectl` flags. Everything after `--` is the
-    **command that runs inside the container**.
-  - `echo hello` — the command itself.
+  - `--` separates kubectl flags from the container command.
 
-  ## When is the Job "done"?
-
-  A Job counts a Pod as done when the Pod's container exits with
-  code `0`. If it exits with a non-zero code, the Job retries
-  (up to `backoffLimit` times).
-
-  ## Key status fields
-
-  - `.status.succeeded` — how many Pods finished successfully.
-  - `.status.failed` — how many attempts failed.
-  - `.status.completionTime` — when the Job finished.
-
+  ```
+  kubectl create cronjob NAME --image=IMAGE --schedule="*/1 * * * *" -- COMMAND ARGS
+  ```
+  - `--schedule` uses standard cron syntax: `min hour day month weekday`.
 task: |
-  You will do three steps.
+  **Your goal:** run two Jobs and one CronJob.
 
-  ### Step 1 — create
+  Requirements:
+  1. Create a Job named **`sum`** using image **`busybox`** whose
+     container command computes and prints **`1+2=3`**. You can do
+     it with a shell one-liner.
+  2. Wait for the Job to succeed (COMPLETIONS `1/1`).
+  3. Read the Job's logs. It must contain the string `1+2=3`.
+  4. Create a CronJob named **`beep`** using image **`busybox`**
+     that runs `echo beep` **every minute** (`*/1 * * * *`).
+  5. Confirm the CronJob exists (`kubectl get cronjob beep`).
+  6. Press `c` (you do not need to wait a whole minute).
 
-  ```
-  kubectl create job hello --image=busybox -- echo hello
-  ```
-
-  ### Step 2 — see the output
-
-  A Job creates one Pod (default). Find it:
-  ```
-  kubectl get pods -l job-name=hello
-  ```
-
-  Then read its logs (use the real Pod name shown, or the shortcut
-  `job/hello`):
-  ```
-  kubectl logs job/hello
-  ```
-
-  You should see `hello` printed.
-
-  ### Step 3 — check
-
-  ```
-  kubectl get job hello
-  ```
-
-  You should see **COMPLETIONS 1/1**. Then press `c`.
-
-  Clean up later with:
-  ```
-  kubectl delete job hello
-  ```
-
-  ## Bonus — a CronJob (optional)
-
-  Every minute, print `hi`:
-  ```
-  kubectl create cronjob greet --image=busybox --schedule="*/1 * * * *" -- echo hi
-  ```
-  Wait one minute, then:
-  ```
-  kubectl get jobs
-  kubectl logs job/greet-<suffix>
-  ```
-  Clean up:
-  ```
-  kubectl delete cronjob greet
-  ```
-hint: "kubectl describe job hello  -- see when the Pod finished and the exit code"
+  Clean up later: delete the Job and the CronJob.
+hint: |
+  - Shell one-liner: use `sh -c "echo '1+2=3'"` as the container command. Format:
+    `kubectl create job sum --image=busybox -- sh -c "echo '1+2=3'"`.
+  - Read logs: `kubectl logs job/sum`.
+  - CronJob: `kubectl create cronjob beep --image=busybox --schedule="*/1 * * * *" -- echo beep`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get job hello -o jsonpath='{.status.succeeded}'"
-  expect: "1"
-  timeout_seconds: 60
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get job sum -o jsonpath='{.status.succeeded}'"
+      expect: "1"
+      timeout_seconds: 60
+    - type: command
+      cmd: "kubectl logs job/sum"
+      expect: "1+2=3"
+    - type: command
+      cmd: "kubectl get cronjob beep -o jsonpath='{.spec.schedule}'"
+      expect: "*/1 * * * *"

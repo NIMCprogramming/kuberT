@@ -2,90 +2,92 @@ id: 04-running-apps/03-deployments
 title: "Deployments"
 module: running-apps
 order: 3
-estimated_minutes: 18
+estimated_minutes: 20
 intro: |
   # Deployments
 
   A **Deployment** is the tool you use most of the time to run
-  apps on Kubernetes.
+  apps on Kubernetes. Chain: **Deployment → ReplicaSet → Pods**.
 
   A Deployment:
-  - makes a ReplicaSet for you (which then makes Pods)
   - keeps the wanted number of Pods alive
   - lets you **update** the image safely, one Pod at a time
-    (rolling update)
   - lets you **roll back** to the old version if the new one
     breaks
 
-  So the chain is: **Deployment → ReplicaSet → Pods**.
+  ## Two ways to create a Deployment
 
-  ## Break `kubectl create deployment` apart
+  **Imperative:**
+  ```
+  kubectl create deployment NAME --image=IMAGE --replicas=N
+  ```
+  (This adds label `app=NAME` to Pods automatically.)
+
+  **Declarative** (a fuller YAML you can save in git):
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: NAME
+  spec:
+    replicas: N
+    selector:
+      matchLabels: { app: NAME }
+    template:
+      metadata:
+        labels: { app: NAME }
+      spec:
+        containers:
+          - name: c
+            image: IMAGE
+  ```
+
+  ## Common follow-up commands
 
   ```
-  kubectl create deployment web --image=nginx --replicas=2
-  ```
-  - `deployment` — the resource kind.
-  - `web` — the Deployment name. Also the label `app=web` is
-    added to Pods automatically.
-  - `--image=nginx` — the image for the container.
-  - `--replicas=2` — start with 2 Pods.
-
-  ## Useful follow-up commands
-
-  ```
-  kubectl set image deploy/web nginx=nginx:1.27   # change image
-  kubectl rollout status deploy/web               # watch the roll
-  kubectl rollout history deploy/web              # see revisions
-  kubectl rollout undo deploy/web                 # go back
-  kubectl scale deploy/web --replicas=5           # change count
-  kubectl delete deploy web                       # remove
+  kubectl set image deploy/NAME c=NEW_IMAGE       # trigger rolling update
+  kubectl rollout status deploy/NAME              # wait for finish
+  kubectl rollout history deploy/NAME             # list revisions
+  kubectl rollout undo deploy/NAME                # go back
+  kubectl scale deploy/NAME --replicas=M          # change count
   ```
 
-  Notice `deploy/web` — a short form for `deployment/web`.
+  Note `deploy/NAME` = short form of `deployment/NAME`.
 
 task: |
-  You will do four steps.
+  **Your goal:** create, scale, update, and roll back.
 
-  ### Step 1 — create
+  Requirements:
+  1. Create a Deployment named **`api`** with image
+     **`nginx:1.25`** and **2 replicas**.
+  2. Wait until READY is `2/2`.
+  3. **Scale it up** to **5 replicas**.
+  4. Wait until READY is `5/5`.
+  5. **Update the image** to **`nginx:1.27`**. Wait for the
+     rollout to finish.
+  6. **Roll back** to the previous version. Wait for the rollout
+     to finish. The current image should be `nginx:1.25` again.
+  7. Press `c`.
 
-  ```
-  kubectl create deployment web --image=nginx --replicas=2
-  ```
-
-  ### Step 2 — watch it come up
-
-  ```
-  kubectl get deploy web
-  kubectl get pods -l app=web
-  ```
-
-  Wait for READY `2/2` on the Deployment.
-
-  ### Step 3 — update the image (rolling update)
-
-  ```
-  kubectl set image deploy/web nginx=nginx:1.27
-  kubectl rollout status deploy/web
-  ```
-
-  You will see one Pod replaced at a time (`web-xxx` → `web-yyy`).
-  Check the running image:
-  ```
-  kubectl get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'
-  ```
-
-  ### Step 4 — check
-
-  When READY is `2/2` again after the update, press `c`.
-
-  Clean up later:
-  ```
-  kubectl delete deploy web
-  ```
-hint: "kubectl rollout history deploy/web  -- see the two revisions"
+  Clean up later: delete the Deployment.
+hint: |
+  - Create: `kubectl create deployment ... --image=... --replicas=...`
+  - Scale: `kubectl scale deploy/api --replicas=5`
+  - Update image: `kubectl set image deploy/api CONTAINER=IMAGE` — the container is named `nginx` if you used `kubectl create` (kubectl uses the image name without tag as the container name).
+  - Wait: `kubectl rollout status deploy/api`
+  - Roll back: `kubectl rollout undo deploy/api`
+  - Check current image: `kubectl get deploy api -o jsonpath='{.spec.template.spec.containers[0].image}'`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get deploy web -o jsonpath='{.status.readyReplicas}'"
-  expect: "2"
-  timeout_seconds: 120
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get deploy api -o jsonpath='{.spec.replicas}'"
+      expect: "5"
+    - type: command
+      cmd: "kubectl get deploy api -o jsonpath='{.status.readyReplicas}'"
+      expect: "5"
+      timeout_seconds: 120
+    - type: command
+      cmd: "kubectl get deploy api -o jsonpath='{.spec.template.spec.containers[0].image}'"
+      expect: "nginx:1.25"

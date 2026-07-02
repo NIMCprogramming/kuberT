@@ -2,7 +2,7 @@ id: 04-running-apps/02-replicasets
 title: "ReplicaSets"
 module: running-apps
 order: 2
-estimated_minutes: 15
+estimated_minutes: 18
 intro: |
   # ReplicaSets
 
@@ -16,96 +16,66 @@ intro: |
 
   ## Three key fields
 
-  Every ReplicaSet has these three parts inside `spec`:
-
   ```yaml
-  spec:
-    replicas: 3                       # how many Pods you want
-    selector:
-      matchLabels: { app: rs-web }    # which Pods count as "mine"
-    template:                         # the Pod recipe
-      metadata:
-        labels: { app: rs-web }       # MUST match selector.matchLabels
-      spec:
-        containers:
-          - name: nginx
-            image: nginx
-  ```
-
-  Important rule: the `template.metadata.labels` **must include**
-  every label from `selector.matchLabels`. Otherwise the ReplicaSet
-  makes Pods that it cannot "see" — you will get an infinite loop
-  of new Pods.
-
-  ## What does "keep alive" mean?
-
-  If you delete one of the Pods by hand, the ReplicaSet notices and
-  makes a new one within seconds. You will try this in Step 3.
-
-task: |
-  You will do four steps.
-
-  ### Step 1 — make the ReplicaSet
-
-  The heredoc uses `<<'EOF'` (with quotes) so the shell does not
-  touch `$` inside.
-
-  ```
-  cat <<'EOF' | kubectl apply -f -
   apiVersion: apps/v1
   kind: ReplicaSet
   metadata:
-    name: rs-web
+    name: NAME
   spec:
-    replicas: 3
+    replicas: N                       # how many Pods you want
     selector:
-      matchLabels: { app: rs-web }
-    template:
+      matchLabels: { KEY: VALUE }     # which Pods count as "mine"
+    template:                         # Pod recipe
       metadata:
-        labels: { app: rs-web }
+        labels: { KEY: VALUE }        # MUST match selector.matchLabels
       spec:
         containers:
-          - name: nginx
-            image: nginx
-  EOF
+          - name: c
+            image: IMAGE
   ```
 
-  ### Step 2 — watch it start
+  Rule you must not break: `template.metadata.labels` must include
+  every label from `selector.matchLabels`. Otherwise the
+  ReplicaSet makes Pods it cannot "see" — infinite loop.
 
-  ```
-  kubectl get rs rs-web
-  kubectl get pods -l app=rs-web
-  ```
+  ## Self-healing
 
-  Watch the READY column go from `0/3` to `3/3`.
+  Delete one of the Pods by hand. The ReplicaSet notices and
+  makes a new one within seconds. You will test this.
 
-  ### Step 3 — see the self-healing
+task: |
+  **Your goal:** build a ReplicaSet and prove it heals itself.
 
-  Delete one Pod by hand. Pick any name from `kubectl get pods -l app=rs-web`:
-  ```
-  kubectl delete pod <one-of-the-names>
-  ```
+  Requirements:
+  1. Create a **ReplicaSet** named **`api-rs`** with:
+     - **4 replicas**
+     - Pods use image **`nginx`**
+     - selector and template labels: **`app: api`**
+  2. Wait until READY is `4/4`.
+  3. Delete **one** of the Pods by hand. Do not delete the
+     ReplicaSet.
+  4. Watch a new Pod appear with a different name. The count
+     stays at `4/4`.
+  5. Confirm `readyReplicas` is still 4, then press `c`.
 
-  Then list again:
-  ```
-  kubectl get pods -l app=rs-web
-  ```
-
-  You will see a new Pod with a fresh name — the ReplicaSet made
-  it. Ready count stays `3/3`.
-
-  ### Step 4 — check
-
-  When `readyReplicas` is 3, press `c`.
-
-  Clean up later with:
-  ```
-  kubectl delete rs rs-web
-  ```
-hint: "kubectl describe rs rs-web  -- see Events like 'Created pod: rs-web-xxxx'"
+  Clean up later: delete the ReplicaSet.
+hint: |
+  - Apply the YAML with a heredoc or a saved file. Do NOT use
+    `kubectl create` — it does not support ReplicaSet directly.
+  - List the current Pods: `kubectl get pods -l app=api`.
+  - Delete one Pod: `kubectl delete pod <one-of-the-names>`.
+  - Watch new one appear: `kubectl get pods -l app=api -w` (Ctrl+C to stop).
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get rs rs-web -o jsonpath='{.status.readyReplicas}'"
-  expect: "3"
-  timeout_seconds: 90
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get rs api-rs -o jsonpath='{.spec.replicas}'"
+      expect: "4"
+    - type: command
+      cmd: "kubectl get rs api-rs -o jsonpath='{.status.readyReplicas}'"
+      expect: "4"
+      timeout_seconds: 120
+    - type: command
+      cmd: "kubectl get rs api-rs -o jsonpath='{.spec.selector.matchLabels.app}'"
+      expect: "api"
