@@ -41,3 +41,8 @@ def test_lesson_screen_check_req_no_requirements() -> None:
 def test_lesson_screen_has_next_binding() -> None:
     keys = [b.key for b in LessonScreen.BINDINGS]
     assert "n" in keys
+
+
+def test_lesson_screen_has_copy_binding() -> None:
+    keys = [b.key for b in LessonScreen.BINDINGS]
+    assert "y" in keys

@@ -48,6 +48,7 @@ class LessonScreen(Screen[None]):
         Binding("c",      "do_primary",     "Check / Confirm"),
         Binding("h",      "do_hint",        "Hint"),
         Binding("n",      "do_next",        "Next lesson"),
+        Binding("y",      "do_copy_task",   "Copy task"),
         Binding("s",      "app.pop_screen", "Skip"),
     ]
     CSS = """
@@ -84,7 +85,7 @@ class LessonScreen(Screen[None]):
             if isinstance(self.lesson.check, ManualCheck):
                 tip = "Press [b]c[/b] to mark as read, [b]n[/b] to skip to next."
             else:
-                tip = "[b]c[/b] check  [b]h[/b] hint  [b]n[/b] next  [b]s[/b] skip"
+                tip = "[b]c[/b] check  [b]h[/b] hint  [b]y[/b] copy task  [b]n[/b] next  [b]s[/b] skip"
             log.write(f"[dim]{tip}[/dim]")
 
     def _check_req(self) -> tuple[bool, str]:
@@ -125,6 +126,13 @@ class LessonScreen(Screen[None]):
             log.write("[dim]No hint for reading lessons.[/dim]")
             return
         log.write(f"[blue]Hint: {self.lesson.hint or 'No hint.'}[/blue]")
+
+    def action_do_copy_task(self) -> None:
+        log = self.query_one("#output", RichLog)
+        text = self.lesson.task if not isinstance(self.lesson.check, ManualCheck) else self.lesson.intro
+        self.app.copy_to_clipboard(text)
+        log.write("[green]Task copied to clipboard.[/green]")
+        self.app.notify("Task copied to clipboard.", severity="information")
 
     def action_do_next(self) -> None:
         progress = load_progress()
