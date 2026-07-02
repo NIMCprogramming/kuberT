@@ -2,7 +2,7 @@ id: 06-services-networking/01-services-basics
 title: "Services basics"
 module: services-networking
 order: 1
-estimated_minutes: 15
+estimated_minutes: 20
 intro: |
   # Services
 
@@ -20,72 +20,87 @@ intro: |
 
   ## How does the Service pick its Pods?
 
-  It uses a **label selector**. Example: `app=web`. Every Pod with
-  label `app=web` is behind the Service.
-
-  Under the hood Kubernetes keeps an **Endpoints** object with the
-  IPs of all matching Pods. You can look at it any time:
+  It uses a **label selector**. Every Pod with a matching label is
+  behind the Service. Kubernetes keeps an **Endpoints** object
+  with the current Pod IPs:
   ```
-  kubectl get endpoints web
+  kubectl get endpoints <service-name>
   ```
 
-  ## Break `kubectl expose` apart
+  ## Example (reference only — do not run this yet)
+
+  Making a Deployment and a Service for it in two steps:
 
   ```
-  kubectl expose deployment web --port=80 --target-port=80 --name=web
+  kubectl create deployment demo --image=nginx --replicas=2
+  kubectl expose deployment demo --port=80 --target-port=80 --name=demo
   ```
-  - `expose deployment web` — take the Pods behind Deployment
-    `web` and put a Service in front.
-  - `--port=80` — the port on the **Service**. Clients call
-    `web:80`.
-  - `--target-port=80` — the port **inside the Pod** (where nginx
-    listens).
-  - `--name=web` — the Service name (default: same as the source).
-  - By default the Service type is **ClusterIP**.
 
+  Break `kubectl expose` apart:
+  - `expose deployment demo` — take the Pods of Deployment `demo`.
+  - `--port=80` — the port ON THE SERVICE. Clients call `demo:80`.
+  - `--target-port=80` — the port INSIDE the Pod (where nginx
+    listens). Often the same number, but not always.
+  - `--name=demo` — the Service name.
+
+  You can also list and inspect Services:
+  ```
+  kubectl get svc
+  kubectl describe svc demo
+  kubectl get endpoints demo
+  ```
 task: |
-  You will do four steps.
+  **Your turn — build it yourself, do not copy the example.**
 
-  ### Step 1 — make sure a Deployment exists
+  Goal: run a small shop app with a Service in front of it.
 
-  If you deleted `web` earlier, make it again:
+  Requirements:
+  1. A **Deployment** named `shop` using the image `nginx`, with
+     **3 replicas**.
+  2. A **Service** named `shop-svc` in front of the Deployment.
+     - Type: `ClusterIP` (the default).
+     - Service port: **8080**.
+     - Target port: **80** (nginx listens on 80).
+  3. The Service must have **3 endpoints** (one per Pod).
+  4. From another Pod, calling `http://shop-svc:8080` returns
+     HTTP `200`.
+
+  When you think it works, verify with:
   ```
-  kubectl create deployment web --image=nginx --replicas=2
+  kubectl get deploy shop
+  kubectl get svc shop-svc
+  kubectl get endpoints shop-svc
   ```
-
-  ### Step 2 — put a Service in front of it
-
-  ```
-  kubectl expose deployment web --port=80 --target-port=80 --name=web
-  ```
-
-  ### Step 3 — look at it
-
-  ```
-  kubectl get svc web
-  kubectl get endpoints web
-  ```
-
-  The `ENDPOINTS` column should list two Pod IPs (because
-  `replicas=2`).
-
-  ### Step 4 — call the Service from another Pod
-
-  Run a short-lived `curl` Pod that talks to the Service by name:
+  and then hit it from a tester Pod (this command is only a test
+  — it does not create anything):
   ```
   kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
-    curl -s -o /dev/null -w "%{http_code}\n" http://web
+    curl -s -o /dev/null -w "%{http_code}\n" http://shop-svc:8080
   ```
 
-  You should see `200`. This proves DNS worked (the name `web`
-  resolved to the Service IP) and the Service load-balanced the
-  request to a Pod.
+  Then press `c`.
 
-  When you see `200`, press `c`.
-hint: "kubectl describe svc web  -- see Selector, Type, and the current Endpoints"
+  Clean up later:
+  ```
+  kubectl delete svc shop-svc
+  kubectl delete deploy shop
+  ```
+hint: |
+  - You need TWO commands. First `kubectl create deployment ...`, then `kubectl expose deployment ...`.
+  - For the Deployment: think about `--image` and `--replicas`.
+  - For the Service: `--port` is the SERVICE port (what clients dial), `--target-port` is the container port (where nginx listens). They are different in this task.
+  - Endpoints appear only when the Pods are Ready. If you see `<none>`, wait a few seconds or check `kubectl get pods -l app=shop`.
 requires: [cluster]
 check:
-  type: command
-  cmd: "kubectl get svc web -o jsonpath='{.spec.type}'"
-  expect: "ClusterIP"
-  timeout_seconds: 15
+  type: multiple
+  checks:
+    - type: command
+      cmd: "kubectl get deploy shop -o jsonpath='{.status.readyReplicas}'"
+      expect: "3"
+      timeout_seconds: 90
+    - type: command
+      cmd: "kubectl get svc shop-svc -o jsonpath='{.spec.ports[0].port}'"
+      expect: "8080"
+    - type: command
+      cmd: "kubectl get svc shop-svc -o jsonpath='{.spec.ports[0].targetPort}'"
+      expect: "80"
