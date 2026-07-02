@@ -1,7 +1,7 @@
-id: 06-services-networking/04-pod-to-pod
+id: 06-services-networking/05-pod-to-pod
 title: "Pod-to-Pod networking"
 module: services-networking
-order: 4
+order: 5
 estimated_minutes: 12
 intro: |
   # How Pods talk to each other

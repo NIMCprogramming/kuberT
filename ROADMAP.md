@@ -31,7 +31,7 @@ sub-topics and use A2 English.
 - `03-setting-up/`: local-cluster-with-kind, first-kubectl, first-app
 - `04-running-apps/`: pods, replicasets, deployments, statefulsets, jobs
 - `05-configuration/`: configmaps, secrets
-- `06-services-networking/`: services-basics, external-access, loadbalancer, pod-to-pod
+- `06-services-networking/`: services-basics, external-access, helm-basics, loadbalancer, pod-to-pod
 - `07-security/`: rbac, network-policies, pod-security
 - `08-resources/`: requests-limits, namespaces-quotas, optimize-usage
 - `09-observability/`: logs, metrics, traces, health, tools

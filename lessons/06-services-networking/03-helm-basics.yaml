@@ -1,0 +1,117 @@
+id: 06-services-networking/03-helm-basics
+title: "Helm — a quick intro (needed for Ingress)"
+module: services-networking
+order: 3
+estimated_minutes: 15
+intro: |
+  # Helm — the package manager for Kubernetes
+
+  In the next lesson you will install **Traefik** (an Ingress
+  controller). The easiest way to install it is with **Helm**, so
+  we learn just enough Helm now.
+
+  ## The three words
+
+  - **Chart** — a folder with YAML templates + a `values.yaml`
+    file. Ready to install. Think *"apt package"* or *"npm
+    package"*, but for Kubernetes.
+  - **Repository** — a place charts live. Like a Docker registry,
+    but for charts. Examples: `bitnami`, `traefik`, `ingress-nginx`.
+  - **Release** — one **install** of a chart, with a chosen name
+    and values. You can install the same chart many times, each
+    time is one release.
+
+  ## The Helm CLI
+
+  The `helm` command talks to the cluster the same way `kubectl`
+  does (same kubeconfig). It just knows how to render + apply
+  Chart templates for you.
+
+  ## Command shape (reference)
+
+  ```
+  helm repo add NAME URL              # register a repo
+  helm repo update                    # refresh chart lists
+  helm search repo NAME               # find charts in the repo
+  helm install RELEASE CHART          # install (RELEASE = your name)
+  helm install RELEASE CHART -n NS    # install into a namespace
+  helm install RELEASE CHART -f values.yaml --set key=val
+  helm list -A                        # list releases in every ns
+  helm upgrade RELEASE CHART          # apply new version / new values
+  helm rollback RELEASE REV           # go back to revision REV
+  helm uninstall RELEASE              # remove the release
+  ```
+
+  Break `helm install traefik traefik/traefik --namespace kube-system`
+  apart:
+  - `install` — install a chart.
+  - `traefik` — the **release name** (this instance).
+  - `traefik/traefik` — the **chart**: repo `traefik`, chart
+    `traefik`.
+  - `--namespace kube-system` — install into the `kube-system`
+    namespace.
+
+  ## Do I have Helm?
+
+  Check with `helm version`. If missing, install once:
+  ```
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  ```
+task: |
+  **Your goal:** install Helm (if missing) and install a tiny
+  demo chart so you see the flow.
+
+  Requirements:
+  1. Confirm `helm version` prints a version. If not, install
+     Helm using the script above.
+  2. Add the **Bitnami** chart repository at
+     `https://charts.bitnami.com/bitnami` and name it `bitnami`.
+  3. Update the local repo cache.
+  4. Install the **`nginx`** chart from Bitnami as a release
+     named **`web`** in namespace **`default`**.
+     - Tip: `helm install web bitnami/nginx`.
+  5. Wait until the chart's Pods are Ready:
+     `kubectl get pods -l app.kubernetes.io/instance=web`.
+  6. List your Helm releases and confirm `web` is `deployed`.
+  7. Press `c`.
+
+  ### Clean up later
+
+  ```
+  helm uninstall web
+  ```
+hint: |
+  - Add the repo: `helm repo add bitnami https://charts.bitnami.com/bitnami`
+  - Refresh: `helm repo update`
+  - Install: `helm install web bitnami/nginx`
+  - List: `helm list`
+  - See resources the chart created: `kubectl get all -l app.kubernetes.io/instance=web`
+  - If `helm install` fails with *"chart requires kubeVersion: X"*, your cluster is too old — but `kind` v1.32 is fine.
+requires: [cluster]
+cheat: |
+  ### Helm quick reference
+  - Chart = package, Repository = source, Release = one install.
+  - **CLI:**
+    ```
+    helm repo add NAME URL
+    helm repo update
+    helm search repo NAME
+    helm install RELEASE CHART [-n NS] [-f values.yaml] [--set key=val]
+    helm upgrade RELEASE CHART
+    helm rollback RELEASE REV
+    helm list [-A]
+    helm uninstall RELEASE
+    helm status RELEASE
+    ```
+  - See generated YAML **without** installing:
+    `helm template RELEASE CHART` or `helm install --dry-run --debug ...`.
+  - Chart layout: `Chart.yaml`, `values.yaml`, `templates/*.yaml` (Go templates).
+check:
+  type: multiple
+  checks:
+    - type: command
+      cmd: "helm version --short"
+      expect: "v3"
+    - type: command
+      cmd: "helm list -A --short"
+      expect: "web"

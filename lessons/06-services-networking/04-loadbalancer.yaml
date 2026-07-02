@@ -1,7 +1,7 @@
-id: 06-services-networking/03-loadbalancer
+id: 06-services-networking/04-loadbalancer
 title: "LoadBalancer and Ingress (with Traefik)"
 module: services-networking
-order: 3
+order: 4
 estimated_minutes: 25
 intro: |
   # LoadBalancer and Ingress
