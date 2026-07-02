@@ -4,7 +4,7 @@ from textual.containers import VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Markdown, RichLog, Static
 
-from kubert import cluster
+from kubert import cluster, clipboard
 from kubert.checker import run_check
 from kubert.lesson import discover_lessons, get_default_lessons_root
 from kubert.models import Lesson, ManualCheck
@@ -130,9 +130,14 @@ class LessonScreen(Screen[None]):
     def action_do_copy_task(self) -> None:
         log = self.query_one("#output", RichLog)
         text = self.lesson.task if not isinstance(self.lesson.check, ManualCheck) else self.lesson.intro
+        tool = clipboard.copy(text)
+        if tool is not None:
+            log.write(f"[green]Task copied to clipboard (via {tool}).[/green]")
+            self.app.notify("Task copied to clipboard.", severity="information")
+            return
         self.app.copy_to_clipboard(text)
-        log.write("[green]Task copied to clipboard.[/green]")
-        self.app.notify("Task copied to clipboard.", severity="information")
+        log.write("[yellow]No clipboard tool. Tried OSC 52 escape (works on some terminals).[/yellow]")
+        self.app.notify("Tried OSC 52 clipboard copy.", severity="warning")
 
     def action_do_next(self) -> None:
         progress = load_progress()
