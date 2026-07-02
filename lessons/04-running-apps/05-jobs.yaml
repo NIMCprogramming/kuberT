@@ -2,7 +2,7 @@ id: 04-running-apps/05-jobs
 title: "Jobs and CronJobs"
 module: running-apps
 order: 5
-estimated_minutes: 10
+estimated_minutes: 12
 intro: |
   # Jobs
 
@@ -15,16 +15,57 @@ intro: |
   A Deployment says: *"keep this Pod running forever".*
   A Job says: *"run this Pod until it is done, then stop".*
 
-  A **CronJob** is a Job on a schedule (like Linux `cron`). It runs
-  every day at 03:00, every hour, and so on.
+  A **CronJob** is a Job on a schedule (like Linux `cron`).
+
+  ## Break `kubectl create job` apart
+
+  ```
+  kubectl create job hello --image=busybox -- echo hello
+  ```
+  - `job` — the resource kind.
+  - `hello` — the Job name.
+  - `--image=busybox` — the container image.
+  - `--` — end of `kubectl` flags. Everything after `--` is the
+    **command that runs inside the container**.
+  - `echo hello` — the command itself.
+
+  ## When is the Job "done"?
+
+  A Job counts a Pod as done when the Pod's container exits with
+  code `0`. If it exits with a non-zero code, the Job retries
+  (up to `backoffLimit` times).
+
+  ## Key status fields
+
+  - `.status.succeeded` — how many Pods finished successfully.
+  - `.status.failed` — how many attempts failed.
+  - `.status.completionTime` — when the Job finished.
+
 task: |
-  Run a Job that prints `hello` and exits.
+  You will do three steps.
+
+  ### Step 1 — create
 
   ```
   kubectl create job hello --image=busybox -- echo hello
   ```
 
-  Wait a few seconds. Then check that the Job finished:
+  ### Step 2 — see the output
+
+  A Job creates one Pod (default). Find it:
+  ```
+  kubectl get pods -l job-name=hello
+  ```
+
+  Then read its logs (use the real Pod name shown, or the shortcut
+  `job/hello`):
+  ```
+  kubectl logs job/hello
+  ```
+
+  You should see `hello` printed.
+
+  ### Step 3 — check
 
   ```
   kubectl get job hello
@@ -32,8 +73,27 @@ task: |
 
   You should see **COMPLETIONS 1/1**. Then press `c`.
 
-  Clean up with: `kubectl delete job hello`
-hint: "kubectl logs job/hello  -- see the 'hello' output from the Pod"
+  Clean up later with:
+  ```
+  kubectl delete job hello
+  ```
+
+  ## Bonus — a CronJob (optional)
+
+  Every minute, print `hi`:
+  ```
+  kubectl create cronjob greet --image=busybox --schedule="*/1 * * * *" -- echo hi
+  ```
+  Wait one minute, then:
+  ```
+  kubectl get jobs
+  kubectl logs job/greet-<suffix>
+  ```
+  Clean up:
+  ```
+  kubectl delete cronjob greet
+  ```
+hint: "kubectl describe job hello  -- see when the Pod finished and the exit code"
 requires: [cluster]
 check:
   type: command

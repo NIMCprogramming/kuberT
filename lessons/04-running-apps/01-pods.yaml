@@ -2,34 +2,98 @@ id: 04-running-apps/01-pods
 title: "Your first Pod"
 module: running-apps
 order: 1
-estimated_minutes: 10
+estimated_minutes: 12
 intro: |
   # Pods
 
-  A **Pod** is the smallest part of Kubernetes.
-  A Pod runs one container. Sometimes a Pod runs more than one container.
+  A **Pod** is the smallest unit you can run on Kubernetes.
+  A Pod runs one container. Sometimes it runs more than one
+  container (rare, and only when they must live and die together).
 
   Containers in the same Pod:
-  - have the same IP address (they share the network)
-  - can read the same files (when you give them shared storage)
+  - share the same IP address (they see each other on `localhost`)
+  - can read the same files (when you give them a shared volume)
   - start together and stop together
 
   Most Pods in real life have only one container.
-task: |
-  Make a Pod with the name `hello`. The Pod must run the `nginx` image.
 
-  Open another terminal. Type this command:
+  ## The `kubectl run` command
+
+  ```
+  kubectl run hello --image=nginx
+  ```
+  - `hello` — the **Pod name**.
+  - `--image=nginx` — the container image (looked up on Docker Hub).
+
+  Small but important extra flags:
+  - `--restart=Never` — do not restart on exit (make a plain Pod,
+    not a Deployment).
+  - `--port=80` — say which port the container listens on
+    (informational; does not expose it outside).
+  - `--env=KEY=VALUE` — add an env var to the container.
+  - `--rm -it` — remove the Pod when it exits, and give an
+    interactive terminal.
+
+  ## What can you do with a Pod?
+
+  Once the Pod is running, you can:
+  - **read its logs**: `kubectl logs hello`
+  - **run a command inside it**: `kubectl exec -it hello -- sh`
+  - **see its IP inside the cluster**: `kubectl get pod hello -o wide`
+  - **delete it**: `kubectl delete pod hello`
+
+  You will use all four in this task.
+
+task: |
+  You will do three steps:
+  1. Create a Pod.
+  2. Look inside it (logs and a shell).
+  3. Confirm the Pod is `Running`.
+
+  ### Step 1 — create the Pod
 
   ```
   kubectl run hello --image=nginx
   ```
 
   Wait a few seconds for the image to download.
-  When the Pod is `Running`, come back here and type `check`.
-hint: "Use this command: kubectl run hello --image=nginx"
+
+  ### Step 2 — look inside
+
+  Read the nginx start-up logs:
+  ```
+  kubectl logs hello
+  ```
+
+  Open a shell **inside** the container:
+  ```
+  kubectl exec -it hello -- sh
+  ```
+
+  Inside the shell, try `ls`, `hostname`, then `exit` to leave.
+
+  See where the Pod is running and its cluster-internal IP:
+  ```
+  kubectl get pod hello -o wide
+  ```
+
+  ### Step 3 — check
+
+  Confirm the Pod status is `Running`:
+  ```
+  kubectl get pod hello
+  ```
+
+  When STATUS is `Running`, press `c`.
+
+  Clean up later with:
+  ```
+  kubectl delete pod hello
+  ```
+hint: "kubectl describe pod hello  -- see all events, image pull steps, and the assigned node"
 requires: [cluster]
 check:
   type: command
   cmd: "kubectl get pod hello -o jsonpath='{.status.phase}'"
   expect: "Running"
-  timeout_seconds: 30
+  timeout_seconds: 60

@@ -2,7 +2,7 @@ id: 04-running-apps/03-deployments
 title: "Deployments"
 module: running-apps
 order: 3
-estimated_minutes: 12
+estimated_minutes: 18
 intro: |
   # Deployments
 
@@ -10,39 +10,82 @@ intro: |
   apps on Kubernetes.
 
   A Deployment:
-  - makes a ReplicaSet for you (you saw ReplicaSets last lesson)
+  - makes a ReplicaSet for you (which then makes Pods)
   - keeps the wanted number of Pods alive
   - lets you **update** the image safely, one Pod at a time
+    (rolling update)
   - lets you **roll back** to the old version if the new one
     breaks
 
   So the chain is: **Deployment → ReplicaSet → Pods**.
 
-  You will use Deployments in almost every real project.
-task: |
-  Create a Deployment named `web` with **2 copies** of `nginx`.
+  ## Break `kubectl create deployment` apart
 
-  In another terminal:
+  ```
+  kubectl create deployment web --image=nginx --replicas=2
+  ```
+  - `deployment` — the resource kind.
+  - `web` — the Deployment name. Also the label `app=web` is
+    added to Pods automatically.
+  - `--image=nginx` — the image for the container.
+  - `--replicas=2` — start with 2 Pods.
+
+  ## Useful follow-up commands
+
+  ```
+  kubectl set image deploy/web nginx=nginx:1.27   # change image
+  kubectl rollout status deploy/web               # watch the roll
+  kubectl rollout history deploy/web              # see revisions
+  kubectl rollout undo deploy/web                 # go back
+  kubectl scale deploy/web --replicas=5           # change count
+  kubectl delete deploy web                       # remove
+  ```
+
+  Notice `deploy/web` — a short form for `deployment/web`.
+
+task: |
+  You will do four steps.
+
+  ### Step 1 — create
 
   ```
   kubectl create deployment web --image=nginx --replicas=2
   ```
 
-  Wait until both Pods are ready:
+  ### Step 2 — watch it come up
 
   ```
   kubectl get deploy web
+  kubectl get pods -l app=web
   ```
 
-  Then press `c`.
+  Wait for READY `2/2` on the Deployment.
 
-  To update the image later: `kubectl set image deploy/web nginx=nginx:1.27`
-  To roll back:              `kubectl rollout undo deploy/web`
-  To clean up:               `kubectl delete deploy web`
-hint: "Look for READY 2/2 in kubectl get deploy web"
+  ### Step 3 — update the image (rolling update)
+
+  ```
+  kubectl set image deploy/web nginx=nginx:1.27
+  kubectl rollout status deploy/web
+  ```
+
+  You will see one Pod replaced at a time (`web-xxx` → `web-yyy`).
+  Check the running image:
+  ```
+  kubectl get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'
+  ```
+
+  ### Step 4 — check
+
+  When READY is `2/2` again after the update, press `c`.
+
+  Clean up later:
+  ```
+  kubectl delete deploy web
+  ```
+hint: "kubectl rollout history deploy/web  -- see the two revisions"
 requires: [cluster]
 check:
   type: command
   cmd: "kubectl get deploy web -o jsonpath='{.status.readyReplicas}'"
   expect: "2"
-  timeout_seconds: 90
+  timeout_seconds: 120

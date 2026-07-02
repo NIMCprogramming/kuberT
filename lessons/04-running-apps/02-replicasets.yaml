@@ -2,7 +2,7 @@ id: 04-running-apps/02-replicasets
 title: "ReplicaSets"
 module: running-apps
 order: 2
-estimated_minutes: 10
+estimated_minutes: 15
 intro: |
   # ReplicaSets
 
@@ -11,20 +11,47 @@ intro: |
 
   You almost never make a ReplicaSet by yourself. You make a
   **Deployment**, and the Deployment makes a ReplicaSet for you.
-  But it is good to know what a ReplicaSet does.
+  But it is very good to know how a ReplicaSet works, because it
+  is the piece that actually creates Pods.
 
-  A ReplicaSet has three key parts:
-  - **replicas** — how many Pods you want.
-  - **selector** — which Pods count. It matches labels.
-  - **template** — the Pod recipe. New Pods use this template.
+  ## Three key fields
+
+  Every ReplicaSet has these three parts inside `spec`:
+
+  ```yaml
+  spec:
+    replicas: 3                       # how many Pods you want
+    selector:
+      matchLabels: { app: rs-web }    # which Pods count as "mine"
+    template:                         # the Pod recipe
+      metadata:
+        labels: { app: rs-web }       # MUST match selector.matchLabels
+      spec:
+        containers:
+          - name: nginx
+            image: nginx
+  ```
+
+  Important rule: the `template.metadata.labels` **must include**
+  every label from `selector.matchLabels`. Otherwise the ReplicaSet
+  makes Pods that it cannot "see" — you will get an infinite loop
+  of new Pods.
+
+  ## What does "keep alive" mean?
+
+  If you delete one of the Pods by hand, the ReplicaSet notices and
+  makes a new one within seconds. You will try this in Step 3.
+
 task: |
-  Make a ReplicaSet with **3 copies** of the `nginx` image.
-  Use the name `rs-web`.
+  You will do four steps.
 
-  In another terminal, run:
+  ### Step 1 — make the ReplicaSet
+
+  The heredoc uses `<<'EOF'` (with quotes) so the shell does not
+  touch `$` inside.
 
   ```
-  cat <<EOF | kubectl apply -f -
+  cat <<'EOF' | kubectl apply -f -
   apiVersion: apps/v1
   kind: ReplicaSet
   metadata:
@@ -43,13 +70,42 @@ task: |
   EOF
   ```
 
-  Wait a few seconds, then press `c`.
+  ### Step 2 — watch it start
 
-  Clean up later with: `kubectl delete rs rs-web`
-hint: "kubectl get rs rs-web  -- watch READY change from 0 to 3"
+  ```
+  kubectl get rs rs-web
+  kubectl get pods -l app=rs-web
+  ```
+
+  Watch the READY column go from `0/3` to `3/3`.
+
+  ### Step 3 — see the self-healing
+
+  Delete one Pod by hand. Pick any name from `kubectl get pods -l app=rs-web`:
+  ```
+  kubectl delete pod <one-of-the-names>
+  ```
+
+  Then list again:
+  ```
+  kubectl get pods -l app=rs-web
+  ```
+
+  You will see a new Pod with a fresh name — the ReplicaSet made
+  it. Ready count stays `3/3`.
+
+  ### Step 4 — check
+
+  When `readyReplicas` is 3, press `c`.
+
+  Clean up later with:
+  ```
+  kubectl delete rs rs-web
+  ```
+hint: "kubectl describe rs rs-web  -- see Events like 'Created pod: rs-web-xxxx'"
 requires: [cluster]
 check:
   type: command
   cmd: "kubectl get rs rs-web -o jsonpath='{.status.readyReplicas}'"
   expect: "3"
-  timeout_seconds: 60
+  timeout_seconds: 90

@@ -2,7 +2,7 @@ id: 04-running-apps/04-statefulsets
 title: "StatefulSets"
 module: running-apps
 order: 4
-estimated_minutes: 12
+estimated_minutes: 15
 intro: |
   # StatefulSets
 
@@ -10,19 +10,40 @@ intro: |
   remember data — like databases (Postgres, MySQL, MongoDB).
 
   Key differences from a Deployment:
-  - Pods get **stable names**: `db-0`, `db-1`, `db-2`. They do not
-    change if a Pod restarts.
+  - Pods get **stable names**: `db-0`, `db-1`, `db-2`. Names do
+    not change if a Pod restarts.
   - Pods start **in order**: `db-0` first, then `db-1`, then `db-2`.
-  - Each Pod can get its **own disk** that stays with it.
+  - Each Pod can get its **own disk** (a PVC created from a
+    `volumeClaimTemplates`).
+  - A **headless Service** gives each Pod its own DNS name
+    (`db-0.db`, `db-1.db`, ...). We will build the PVC part in the
+    storage module; here we only test the stable-name part.
 
   A Deployment says: *"give me 3 web servers, any names are OK".*
-  A StatefulSet says: *"give me 3 database Pods, and they must be
-  db-0, db-1, db-2, in that order, with their own disks".*
+  A StatefulSet says: *"give me 3 Pods called db-0, db-1, db-2,
+  in that order".*
+
+  ## Two key extra fields
+
+  A StatefulSet YAML has two things a Deployment does not:
+  ```yaml
+  spec:
+    serviceName: web-ss    # matches the headless Service name
+    ...
+    # volumeClaimTemplates:  # (used later, for real DBs)
+  ```
+
+  `serviceName` links the StatefulSet to a **headless Service**
+  (a Service with `clusterIP: None`) so DNS names like
+  `web-ss-0.web-ss` work.
+
 task: |
-  Create a small StatefulSet with 2 copies of nginx.
+  You will do three steps.
+
+  ### Step 1 — create
 
   ```
-  cat <<EOF | kubectl apply -f -
+  cat <<'EOF' | kubectl apply -f -
   apiVersion: apps/v1
   kind: StatefulSet
   metadata:
@@ -42,20 +63,36 @@ task: |
   EOF
   ```
 
-  Check the Pod names:
+  ### Step 2 — see the stable, ordered names
 
   ```
-  kubectl get pod -l app=web-ss
+  kubectl get pods -l app=web-ss
   ```
 
-  You should see **web-ss-0** and **web-ss-1** — not random names.
-  Then press `c`.
+  You should see exactly `web-ss-0` and `web-ss-1` — never random
+  strings. Now delete one:
+  ```
+  kubectl delete pod web-ss-0
+  ```
 
-  Clean up with: `kubectl delete statefulset web-ss`
+  Watch it come back with the **same** name:
+  ```
+  kubectl get pods -l app=web-ss -w
+  ```
+  (Press `Ctrl+C` to stop watching.)
+
+  ### Step 3 — check
+
+  When both Pods are Ready again, press `c`.
+
+  Clean up later:
+  ```
+  kubectl delete statefulset web-ss
+  ```
 hint: "kubectl get statefulset web-ss  -- watch READY reach 2/2"
 requires: [cluster]
 check:
   type: command
   cmd: "kubectl get statefulset web-ss -o jsonpath='{.status.readyReplicas}'"
   expect: "2"
-  timeout_seconds: 90
+  timeout_seconds: 120
