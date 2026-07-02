@@ -1,0 +1,32 @@
+id: 09-observability/02-metrics
+title: "Metrics"
+module: observability
+order: 2
+estimated_minutes: 8
+intro: |
+  # Metrics
+
+  **Metrics** are numbers about your app over time:
+  - requests per second
+  - error rate
+  - CPU and memory use
+  - queue length
+
+  Kubernetes does not store metrics by itself. Two common tools:
+
+  1. **metrics-server** — a small add-on. It lets you run
+     `kubectl top pod` and `kubectl top node` to see live CPU and
+     memory. Also used by the Horizontal Pod Autoscaler.
+  2. **Prometheus** — a bigger tool. It **pulls** metrics from
+     apps that expose them at `/metrics`. Stores them in a
+     time-series database. You query them with **PromQL** and see
+     them in **Grafana** dashboards.
+
+  In production, Prometheus + Grafana is the classic pair.
+
+  This lesson is for reading. To try `kubectl top pod` on `kind`,
+  install metrics-server later.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

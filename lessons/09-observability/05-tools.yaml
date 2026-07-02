@@ -1,0 +1,36 @@
+id: 09-observability/05-tools
+title: "Observability tools you should know"
+module: observability
+order: 5
+estimated_minutes: 5
+intro: |
+  # Tools
+
+  The observability world is big. Here are common names, grouped.
+
+  **Logs**
+  - Loki
+  - Elasticsearch + Kibana (the ELK stack)
+  - Fluent Bit / Fluentd (agents that ship logs)
+
+  **Metrics**
+  - Prometheus (pulls metrics, stores them)
+  - Grafana (dashboards, works with many stores)
+  - Thanos, Cortex, Mimir (Prometheus at big scale)
+  - metrics-server (light, only recent numbers, for HPA)
+
+  **Traces**
+  - OpenTelemetry (the standard SDK)
+  - Jaeger
+  - Grafana Tempo
+
+  **Everything in one**
+  - Datadog, New Relic (SaaS — you pay)
+  - Grafana LGTM stack (Loki + Grafana + Tempo + Mimir)
+
+  You do not need all of them. Start with logs + metrics. Add
+  tracing when you have many services.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

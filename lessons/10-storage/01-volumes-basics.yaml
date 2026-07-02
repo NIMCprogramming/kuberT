@@ -1,0 +1,66 @@
+id: 10-storage/01-volumes-basics
+title: "Volumes basics"
+module: storage
+order: 1
+estimated_minutes: 10
+intro: |
+  # Why volumes?
+
+  When a container stops, everything inside its filesystem is
+  **gone**. If your app writes files, you lose them on restart.
+
+  A **Volume** is a folder that lives outside the container's
+  filesystem. Two containers in the same Pod can share it. And
+  many Volume types survive Pod restarts.
+
+  Common Volume types:
+  - **emptyDir** — an empty folder created when the Pod starts,
+    deleted when the Pod dies. Good for temp files.
+  - **hostPath** — a folder on the node. Rare, usually only for
+    system Pods.
+  - **PersistentVolumeClaim (PVC)** — a request for real storage
+    that survives Pod deletion. This is the important one.
+
+  ## PV vs PVC
+
+  - **PersistentVolume (PV)** — a piece of storage in the cluster.
+    An admin creates it, or the cluster creates it on demand.
+  - **PersistentVolumeClaim (PVC)** — the user's *request*: "give
+    me 1Gi of ReadWriteOnce storage".
+
+  When you make a PVC, Kubernetes finds (or creates) a matching PV
+  and binds them.
+task: |
+  Ask for a small piece of storage with a PVC. `kind` has a
+  default StorageClass, so it will create a PV for you.
+
+  ```
+  cat <<EOF | kubectl apply -f -
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: data
+  spec:
+    accessModes: [ReadWriteOnce]
+    resources:
+      requests:
+        storage: 100Mi
+  EOF
+  ```
+
+  Wait a few seconds, then check status:
+
+  ```
+  kubectl get pvc data
+  ```
+
+  When STATUS is **Bound**, press `c`.
+
+  Clean up: `kubectl delete pvc data`
+hint: "kubectl describe pvc data  -- see events and the bound PV name"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get pvc data -o jsonpath='{.status.phase}'"
+  expect: "Bound"
+  timeout_seconds: 60

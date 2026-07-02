@@ -1,0 +1,62 @@
+id: 08-resources/02-namespaces-quotas
+title: "Namespaces and Quotas"
+module: resources
+order: 2
+estimated_minutes: 10
+intro: |
+  # Namespaces
+
+  A **Namespace** is a folder inside the cluster. It groups
+  resources (Pods, Services, ConfigMaps, ...). Names must be
+  unique **inside** a namespace, but two namespaces can each have
+  a Pod called `web`.
+
+  Common uses:
+  - one namespace per team
+  - one namespace per environment (`dev`, `stage`, `prod`)
+
+  A cluster always has: `default`, `kube-system`, `kube-public`.
+
+  ## ResourceQuota
+
+  A **ResourceQuota** limits how much a namespace can use:
+  - total CPU or memory
+  - total number of Pods
+  - total number of Services
+
+  With a ResourceQuota, one loud team cannot eat the whole cluster.
+task: |
+  Make a new namespace and put a small quota on it.
+
+  ```
+  kubectl create namespace demo
+  cat <<EOF | kubectl apply -f -
+  apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: q
+    namespace: demo
+  spec:
+    hard:
+      pods: "5"
+      requests.cpu: "500m"
+      requests.memory: 256Mi
+  EOF
+  ```
+
+  Check it:
+
+  ```
+  kubectl get resourcequota -n demo
+  ```
+
+  Then press `c`.
+
+  Clean up later: `kubectl delete namespace demo`
+hint: "kubectl describe resourcequota q -n demo  -- see used vs hard"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get resourcequota q -n demo -o jsonpath='{.spec.hard.pods}'"
+  expect: "5"
+  timeout_seconds: 15

@@ -1,0 +1,49 @@
+id: 09-observability/01-logs
+title: "Logs"
+module: observability
+order: 1
+estimated_minutes: 8
+intro: |
+  # Logs
+
+  When your app writes to **stdout** or **stderr** inside a
+  container, Kubernetes saves that text as **logs**.
+
+  You read logs with:
+
+  ```
+  kubectl logs <pod-name>
+  ```
+
+  Useful flags:
+  - `-f` — follow (stream new lines as they come). Like `tail -f`.
+  - `--previous` — see logs from the last crashed container.
+  - `-c <name>` — pick a container inside a multi-container Pod.
+  - `--tail=100` — only the last 100 lines.
+
+  For big projects, teams send logs to a central tool:
+  **Loki**, **Elasticsearch**, or a cloud logging service. Each
+  node runs a small agent that ships logs from the container files.
+
+  This lesson uses `kubectl logs` on your local cluster.
+task: |
+  If you don't have a `web` Deployment, make one:
+
+  ```
+  kubectl create deployment web --image=nginx --replicas=1
+  ```
+
+  Then read its logs:
+
+  ```
+  kubectl logs deploy/web
+  ```
+
+  You should see nginx start-up lines. Then press `c`.
+hint: "kubectl logs -f deploy/web  -- stream logs live"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get deploy web -o jsonpath='{.status.readyReplicas}'"
+  expect: "1"
+  timeout_seconds: 60

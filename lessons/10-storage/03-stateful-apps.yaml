@@ -1,0 +1,76 @@
+id: 10-storage/03-stateful-apps
+title: "Running stateful apps"
+module: storage
+order: 3
+estimated_minutes: 12
+intro: |
+  # Stateful apps
+
+  Databases and other apps that keep data need:
+  1. **Stable Pod names** — so clients know where to reconnect.
+  2. **Their own disk** — one PVC per Pod, not shared.
+  3. **Ordered start-up** — Pod `-0` first, then `-1`, then `-2`.
+
+  That is exactly what a **StatefulSet** gives you (you saw them in
+  module 04). StatefulSets combine with a special field called
+  `volumeClaimTemplates` — a **template** for PVCs. Kubernetes
+  creates one PVC **per Pod** from this template.
+
+  So `db-0` gets `data-db-0`, `db-1` gets `data-db-1`, etc. If
+  `db-0` restarts, it re-attaches to `data-db-0` and keeps its
+  data.
+
+  This is how Postgres, MySQL, Kafka, and Elasticsearch run on
+  Kubernetes.
+task: |
+  Create a small StatefulSet where each Pod has its own 100Mi
+  PVC.
+
+  ```
+  cat <<EOF | kubectl apply -f -
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: data-app
+  spec:
+    serviceName: data-app
+    replicas: 2
+    selector:
+      matchLabels: { app: data-app }
+    template:
+      metadata:
+        labels: { app: data-app }
+      spec:
+        containers:
+          - name: c
+            image: nginx
+            volumeMounts:
+              - name: data
+                mountPath: /usr/share/nginx/html
+    volumeClaimTemplates:
+      - metadata:
+          name: data
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests: { storage: 100Mi }
+  EOF
+  ```
+
+  Wait for the PVCs to be Bound:
+
+  ```
+  kubectl get pvc
+  ```
+
+  You should see `data-data-app-0` and `data-data-app-1`. Then
+  press `c`.
+
+  Clean up: `kubectl delete statefulset data-app; kubectl delete pvc -l app=data-app`
+hint: "kubectl get pods -l app=data-app -o wide  -- see the two Pods"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get statefulset data-app -o jsonpath='{.status.readyReplicas}'"
+  expect: "2"
+  timeout_seconds: 120

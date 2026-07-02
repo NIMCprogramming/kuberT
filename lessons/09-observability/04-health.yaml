@@ -1,0 +1,64 @@
+id: 09-observability/04-health
+title: "Probes: liveness, readiness, startup"
+module: observability
+order: 4
+estimated_minutes: 10
+intro: |
+  # Health probes
+
+  How does Kubernetes know if your app is alive? Probes.
+
+  Three types:
+
+  - **Liveness probe** — *"is the app still alive?"* If it fails,
+    Kubernetes **restarts the container**.
+  - **Readiness probe** — *"is the app ready to serve traffic?"*
+    If it fails, the Pod is removed from the Service (no traffic)
+    but not restarted.
+  - **Startup probe** — *"has the app finished starting?"* Used
+    for slow-start apps. While it runs, liveness is not checked.
+
+  Each probe can be:
+  - `httpGet` (a URL returns 2xx or 3xx)
+  - `tcpSocket` (a port accepts a TCP connection)
+  - `exec` (a command inside the container exits 0)
+
+  **Good defaults:**
+  - Always add a readiness probe.
+  - Add a liveness probe if the app can hang.
+  - Use a startup probe for apps that take a long time to boot.
+task: |
+  Add a simple HTTP readiness probe to a Pod running nginx.
+
+  ```
+  cat <<EOF | kubectl apply -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: healthy
+  spec:
+    containers:
+      - name: c
+        image: nginx
+        readinessProbe:
+          httpGet: { path: /, port: 80 }
+          periodSeconds: 5
+  EOF
+  ```
+
+  Wait until the Pod is Ready:
+
+  ```
+  kubectl get pod healthy
+  ```
+
+  You should see READY `1/1`. Then press `c`.
+
+  Clean up: `kubectl delete pod healthy`
+hint: "kubectl describe pod healthy  -- see the probe near the bottom"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get pod healthy -o jsonpath='{.status.containerStatuses[0].ready}'"
+  expect: "true"
+  timeout_seconds: 60

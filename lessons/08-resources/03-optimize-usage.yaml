@@ -1,0 +1,34 @@
+id: 08-resources/03-optimize-usage
+title: "Optimize resource usage"
+module: resources
+order: 3
+estimated_minutes: 6
+intro: |
+  # Save CPU and memory
+
+  Big Kubernetes bills often come from:
+  - requests that are **way too high** (the Pod uses 10% of what
+    it asks for)
+  - many Pods with no requests at all (the scheduler cannot pack
+    them well)
+
+  Some good habits:
+
+  1. **Measure first.** Install `metrics-server` and use
+     `kubectl top pod` to see the real CPU/memory a Pod uses.
+  2. **Right-size.** Set requests close to the real usage. Leave
+     some room, but not too much.
+  3. **Use HPA.** The Horizontal Pod Autoscaler (module 12) adds
+     and removes Pods when load changes.
+  4. **Use LimitRange.** A `LimitRange` puts a default request
+     and limit on every Pod in a namespace, so you never forget.
+
+  Also useful:
+  - Delete old test Deployments.
+  - Use smaller base images (Alpine, distroless).
+
+  This lesson is for reading only.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

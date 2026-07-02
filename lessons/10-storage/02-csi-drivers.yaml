@@ -1,0 +1,45 @@
+id: 10-storage/02-csi-drivers
+title: "CSI drivers and StorageClasses"
+module: storage
+order: 2
+estimated_minutes: 8
+intro: |
+  # How does the storage get created?
+
+  When you make a PVC, something must create the real disk on the
+  cloud (or on the local disk of the node). That "something" is a
+  **CSI driver**.
+
+  **CSI** = *Container Storage Interface*. It is a common API so
+  every storage system (AWS EBS, GCP PD, Ceph, NFS, local disks,
+  ...) can plug into Kubernetes the same way.
+
+  A **StorageClass** is the "menu item" the user picks:
+  - name: `fast-ssd`, `slow-hdd`, `standard`
+  - which CSI driver to use
+  - parameters (size limits, replication, ...)
+
+  If you do not name a StorageClass in your PVC, the cluster's
+  **default** StorageClass is used. On `kind`, the default is
+  `standard` (local disk on the node).
+
+  ## Reclaim policy
+
+  When a PVC is deleted, what happens to the disk?
+  - `Delete` — the disk is removed too.
+  - `Retain` — the disk stays, so an admin can recover the data.
+task: |
+  List the StorageClasses on your cluster.
+
+  ```
+  kubectl get storageclass
+  ```
+
+  You should see one marked `(default)`. Then press `c`.
+hint: "kubectl get storageclass standard -o yaml  -- see the provisioner (CSI driver)"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get storageclass -o jsonpath='{.items[?(@.metadata.annotations.storageclass\\.kubernetes\\.io/is-default-class==\"true\")].metadata.name}'"
+  expect: "standard"
+  timeout_seconds: 15

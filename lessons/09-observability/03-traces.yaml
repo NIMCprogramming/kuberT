@@ -1,0 +1,32 @@
+id: 09-observability/03-traces
+title: "Tracing"
+module: observability
+order: 3
+estimated_minutes: 6
+intro: |
+  # Tracing
+
+  Logs tell you *what* happened. Metrics tell you *how much*.
+  **Traces** tell you *where the time went*.
+
+  A trace follows one request through many services. Example:
+
+  ```
+  user → frontend → cart → payment → db
+  ```
+
+  Each step is called a **span**. Together they form one trace.
+  You see a nice timeline: *"payment took 800 ms, that is the slow
+  step"*.
+
+  Popular tools:
+  - **OpenTelemetry** — the standard for producing traces from your
+    app.
+  - **Jaeger** and **Tempo** — store traces and let you search
+    them.
+
+  Tracing is a big topic. This lesson only introduces the idea.
+task: |
+  No task. Press `c`.
+check:
+  type: manual
