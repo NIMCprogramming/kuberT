@@ -9,7 +9,7 @@ def test_app_module_importable() -> None:
 
 def test_menu_has_expected_actions() -> None:
     keys = [key for key, _label in app.MENU]
-    for expected in ("next", "pick", "init", "status", "reset", "quit"):
+    for expected in ("next", "pick", "init", "status", "reset", "progress", "quit"):
         assert expected in keys, f"missing menu action: {expected}"
 
 

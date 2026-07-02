@@ -7,15 +7,16 @@ from kubert import cluster
 from kubert.cluster_screens import InitScreen, ResetConfirmScreen
 from kubert.lesson import discover_lessons, get_default_lessons_root
 from kubert.lesson_screens import LessonPickerScreen, LessonScreen
-from kubert.state import load_progress
+from kubert.state import load_progress, reset_progress
 
 MENU = [
-    ("next",   "Run next unfinished lesson"),
-    ("pick",   "Pick a lesson from the list"),
-    ("init",   "Check tools / create cluster"),
-    ("status", "Show cluster status"),
-    ("reset",  "Delete cluster"),
-    ("quit",   "Quit"),
+    ("next",     "Run next unfinished lesson"),
+    ("pick",     "Pick a lesson from the list"),
+    ("init",     "Check tools / create cluster"),
+    ("status",   "Show cluster status"),
+    ("reset",    "Delete cluster"),
+    ("progress", "Reset my lesson progress"),
+    ("quit",     "Quit"),
 ]
 
 
@@ -54,6 +55,9 @@ class MainMenuScreen(Screen[None]):
             self._show_status()
         elif action == "reset":
             self.app.push_screen(ResetConfirmScreen())
+        elif action == "progress":
+            reset_progress()
+            self.app.notify("Progress cleared. Start from lesson 1.", severity="information")
 
     def _open_next(self) -> None:
         progress = load_progress()

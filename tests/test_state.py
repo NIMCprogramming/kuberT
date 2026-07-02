@@ -1,5 +1,5 @@
 from kubert.models import UserProgress
-from kubert.state import load_progress, save_progress
+from kubert.state import load_progress, reset_progress, save_progress
 
 
 def test_load_returns_empty_when_no_file(tmp_path, monkeypatch) -> None:
@@ -26,3 +26,17 @@ def test_load_ignores_unknown_fields(tmp_path, monkeypatch) -> None:
         '{"schema_version": 1, "completed_lessons": ["a"]}'
     )
     assert load_progress().completed_lessons == ["a"]
+
+
+def test_reset_progress_removes_file(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("KUBERT_STATE_DIR", str(tmp_path))
+    save_progress(UserProgress(completed_lessons=["a"]))
+    assert (tmp_path / "progress.json").exists()
+    reset_progress()
+    assert not (tmp_path / "progress.json").exists()
+    assert load_progress().completed_lessons == []
+
+
+def test_reset_progress_when_no_file(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("KUBERT_STATE_DIR", str(tmp_path))
+    reset_progress()

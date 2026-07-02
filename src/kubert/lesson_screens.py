@@ -52,6 +52,7 @@ class LessonScreen(Screen[None]):
     ]
     CSS = """
     LessonScreen { layout: vertical; }
+    #lesson-title { padding: 0 2; margin: 1 2 0 2; color: $accent; }
     #intro   { padding: 0 2; margin: 1 2 0 2; }
     #task    { border: round $warning; padding: 1 2; margin: 1 2; }
     #output  { border: round $primary; padding: 0 1; margin: 0 2 1 2; height: 10; }
@@ -63,6 +64,10 @@ class LessonScreen(Screen[None]):
 
     def compose(self) -> ComposeResult:
         yield Header()
+        yield Static(
+            f"[b]{self.lesson.id}[/b] — {self.lesson.title}",
+            id="lesson-title",
+        )
         with VerticalScroll():
             yield Markdown(self.lesson.intro, id="intro")
             if not isinstance(self.lesson.check, ManualCheck):

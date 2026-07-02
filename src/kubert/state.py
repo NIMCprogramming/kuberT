@@ -18,3 +18,9 @@ def save_progress(progress: UserProgress) -> None:
     f = _file()
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text(progress.model_dump_json(indent=2))
+
+
+def reset_progress() -> None:
+    f = _file()
+    if f.exists():
+        f.unlink()
