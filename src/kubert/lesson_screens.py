@@ -76,9 +76,10 @@ class LessonScreen(Screen[None]):
         if not ok:
             log.write(f"[red]{msg}[/red]")
         else:
-            tip = "Press [b]c[/b] to mark as read, or [b]n[/b] to skip to next." if isinstance(
-                self.lesson.check, ManualCheck
-            ) else "Press [b]c[/b] to check, [b]h[/b] for hint, [b]n[/b] for next, [b]s[/b] to skip."
+            if isinstance(self.lesson.check, ManualCheck):
+                tip = "Press [b]c[/b] to mark as read, [b]n[/b] to skip to next."
+            else:
+                tip = "[b]c[/b] check  [b]h[/b] hint  [b]n[/b] next  [b]s[/b] skip"
             log.write(f"[dim]{tip}[/dim]")
 
     def _check_req(self) -> tuple[bool, str]:

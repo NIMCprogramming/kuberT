@@ -1,0 +1,46 @@
+id: 11-scheduling/01-basics
+title: "Scheduling basics"
+module: scheduling
+order: 1
+estimated_minutes: 8
+intro: |
+  # How does Kubernetes pick a node for a Pod?
+
+  A part of the control plane called the **scheduler** decides
+  where each new Pod runs. It does two steps:
+
+  1. **Filter** — throw away nodes that cannot run the Pod.
+     Reasons: not enough CPU/memory, wrong OS, taints, ...
+  2. **Score** — from the nodes that are left, give each a score.
+     The best score wins.
+
+  You can guide the scheduler with:
+  - **nodeSelector** — a simple label match. *"Only nodes with
+    disk=ssd."*
+  - **Node affinity** — a richer version of nodeSelector, with
+    `preferred` and `required` rules.
+  - **Pod affinity / anti-affinity** — *"put me near this Pod"* or
+    *"put me away from this Pod"*.
+  - **Taints and tolerations** (next lesson).
+
+  On a `kind` cluster, you usually have only one worker node, so
+  scheduling choice is small. But the ideas are the same on real
+  clusters.
+task: |
+  Look at the nodes and their labels:
+
+  ```
+  kubectl get nodes --show-labels
+  ```
+
+  You will see labels like `kubernetes.io/hostname=...`. These are
+  the labels you can match with a nodeSelector.
+
+  When you have looked at them, press `c`.
+hint: "kubectl label node <name> disk=ssd  -- add a label to a node"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get nodes --no-headers"
+  expect: "Ready"
+  timeout_seconds: 15

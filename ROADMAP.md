@@ -23,8 +23,20 @@ This file is the **source of truth** for the lesson list. Each module here match
 
 ## Status
 
-Built so far:
-- `01-introduction/01-overview` (sample, manual check)
-- `04-running-apps/01-pods` (sample, real `kubectl` check)
+All modules have lesson YAML files. Lessons follow roadmap.sh/kubernetes
+sub-topics and use A2 English.
 
-All other lessons: TODO. Add a YAML file in the right folder when ready.
+- `01-introduction/`: overview, why-kubernetes, key-concepts, alternatives
+- `02-containers/`: what-is-a-container, container-vs-vm, docker-for-k8s
+- `03-setting-up/`: local-cluster-with-kind, first-kubectl, first-app
+- `04-running-apps/`: pods, replicasets, deployments, statefulsets, jobs
+- `05-configuration/`: configmaps, secrets
+- `06-services-networking/`: services-basics, external-access, loadbalancer, pod-to-pod
+- `07-security/`: rbac, network-policies, pod-security
+- `08-resources/`: requests-limits, namespaces-quotas, optimize-usage
+- `09-observability/`: logs, metrics, traces, health, tools
+- `10-storage/`: volumes-basics, csi-drivers, stateful-apps
+- `11-scheduling/`: basics, taints-tolerations, topology-spread, priorities, evictions
+- `12-autoscaling/`: hpa, vpa, cluster-autoscaling
+- `13-deployment-patterns/`: ci-cd, gitops, helm, canary, blue-green, rolling-updates
+- `14-advanced/`: crds, custom-controllers, custom-schedulers, multi-cluster

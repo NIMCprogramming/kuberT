@@ -1,0 +1,31 @@
+id: 12-autoscaling/02-vpa
+title: "Vertical Pod Autoscaler (VPA)"
+module: autoscaling
+order: 2
+estimated_minutes: 6
+intro: |
+  # VPA — make Pods bigger or smaller
+
+  The **Vertical Pod Autoscaler** watches how much CPU and memory
+  a Pod really uses, then changes the **requests and limits** to
+  match.
+
+  Difference from HPA:
+  - **HPA** = same-size Pods, more copies.
+  - **VPA** = fewer or same Pods, but re-sized.
+
+  Warning: to change a Pod's size, VPA usually **restarts** the
+  Pod. So VPA is best for apps that are OK with restarts.
+
+  VPA is **not built in** to Kubernetes. You install it as an
+  add-on (from `kubernetes/autoscaler`).
+
+  Rule of thumb:
+  - Stateless web apps → HPA.
+  - Databases and big single-Pod jobs → VPA (or manual sizing).
+
+  This lesson is for reading only.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

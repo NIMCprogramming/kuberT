@@ -1,0 +1,42 @@
+id: 14-advanced/02-custom-controllers
+title: "Custom controllers and Operators"
+module: advanced
+order: 2
+estimated_minutes: 10
+intro: |
+  # Controllers and Operators
+
+  Kubernetes is a **reconcile loop**:
+  1. Watch the desired state (in YAML).
+  2. Look at the real state.
+  3. Do work to make them match.
+  4. Repeat forever.
+
+  Each built-in resource has a **controller**. The Deployment
+  controller makes ReplicaSets; the ReplicaSet controller makes
+  Pods; and so on.
+
+  You can write your own controller for a CRD. A CRD + a
+  controller together = an **Operator**.
+
+  Example: a Postgres Operator. You write:
+
+  ```
+  kind: PostgresCluster
+  metadata: { name: shop-db }
+  spec: { replicas: 3, storage: 50Gi }
+  ```
+
+  The Operator does everything: makes the StatefulSet, PVCs,
+  Secrets, backups, failover. You did not write any of that YAML.
+
+  Tools to build Operators:
+  - **Kubebuilder** — Go framework.
+  - **Operator SDK** — from Red Hat.
+  - **Metacontroller**, **KOPF** — write in Python.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

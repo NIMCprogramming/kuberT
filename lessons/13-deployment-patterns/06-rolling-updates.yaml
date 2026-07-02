@@ -1,0 +1,54 @@
+id: 13-deployment-patterns/06-rolling-updates
+title: "Rolling updates and rollbacks"
+module: deployment-patterns
+order: 6
+estimated_minutes: 10
+intro: |
+  # Rolling update
+
+  A **rolling update** is the default way a Deployment changes
+  versions. Kubernetes replaces Pods **a few at a time**, not all
+  at once.
+
+  Two important knobs:
+  - **maxUnavailable** — how many old Pods can be down at once.
+  - **maxSurge** — how many extra Pods can exist during the roll.
+
+  Default: `25%` for both. For a Deployment with 4 replicas,
+  Kubernetes may create 1 extra Pod (surge) and remove 1 old Pod
+  at a time.
+
+  Nice commands:
+  - `kubectl rollout status deploy/web` — watch the roll.
+  - `kubectl rollout history deploy/web` — see past versions.
+  - `kubectl rollout undo deploy/web` — go back to the last one.
+
+  Rollback works because a Deployment keeps old ReplicaSets
+  around (the number is set by `revisionHistoryLimit`).
+task: |
+  If you don't have a `web` Deployment, make one:
+
+  ```
+  kubectl create deployment web --image=nginx --replicas=2
+  ```
+
+  Update the image to a newer tag:
+
+  ```
+  kubectl set image deploy/web nginx=nginx:1.27
+  ```
+
+  Watch the roll finish:
+
+  ```
+  kubectl rollout status deploy/web
+  ```
+
+  When it says *"deployment ... successfully rolled out"*, press `c`.
+hint: "kubectl rollout history deploy/web  -- shows revisions"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'"
+  expect: "nginx:1.27"
+  timeout_seconds: 120

@@ -1,0 +1,32 @@
+id: 13-deployment-patterns/01-ci-cd
+title: "CI/CD for Kubernetes"
+module: deployment-patterns
+order: 1
+estimated_minutes: 8
+intro: |
+  # CI and CD
+
+  Two short words that people mix up:
+
+  - **CI** — *Continuous Integration*. Every push runs tests and
+    builds the image. Answers: *"did the code still work?"*
+  - **CD** — *Continuous Delivery* or *Deployment*. The new image
+    goes to a real cluster. Answers: *"is the change live?"*
+
+  A basic Kubernetes CI/CD flow:
+
+  1. You push code to Git.
+  2. CI runs tests → builds a Docker image → pushes it to a
+     registry (`ghcr.io`, Docker Hub, ECR, ...).
+  3. CD updates the Deployment to use the new image tag.
+  4. Kubernetes does a rolling update.
+
+  Popular tools:
+  - **GitHub Actions**, **GitLab CI**, **CircleCI** — for the CI
+    part.
+  - **Argo CD**, **Flux** — pull-based CD (next lesson: GitOps).
+  - **Spinnaker**, **Jenkins** — older push-based CD.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

@@ -1,0 +1,35 @@
+id: 13-deployment-patterns/02-gitops
+title: "GitOps"
+module: deployment-patterns
+order: 2
+estimated_minutes: 8
+intro: |
+  # GitOps
+
+  **GitOps** is a simple idea: *the Git repo is the source of
+  truth for the cluster*.
+
+  You do **not** run `kubectl apply` by hand. Instead:
+
+  1. You change YAML in Git and merge.
+  2. A tool inside the cluster watches the Git repo.
+  3. The tool applies the changes to the cluster.
+
+  This is **pull-based** CD: the cluster *pulls* changes from Git.
+
+  Wins:
+  - Git history = deployment history.
+  - Roll back = revert the commit.
+  - Two clusters can stay in sync from the same repo.
+
+  Main tools:
+  - **Argo CD** — nice web UI, popular.
+  - **Flux** — CLI-first, from Weaveworks.
+
+  You can start GitOps with just one folder of YAML files. As you
+  grow, you split by environment (`base/`, `overlays/dev`,
+  `overlays/prod`) and use **Kustomize** or **Helm**.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

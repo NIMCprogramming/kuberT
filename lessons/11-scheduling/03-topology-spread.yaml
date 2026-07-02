@@ -1,0 +1,30 @@
+id: 11-scheduling/03-topology-spread
+title: "Topology spread constraints"
+module: scheduling
+order: 3
+estimated_minutes: 6
+intro: |
+  # Spread Pods across zones
+
+  If your cluster has three availability zones (AWS `us-east-1a`,
+  `1b`, `1c`), you want your app copies in **all** zones. Then, if
+  one zone fails, the others still serve users.
+
+  A **topologySpreadConstraint** tells the scheduler:
+  *"balance my Pods across this label"*.
+
+  Example rule: *"the number of Pods with `app=web` in one zone
+  must not be more than 1 higher than in another zone"*.
+
+  Common topology keys:
+  - `topology.kubernetes.io/zone` — zone
+  - `kubernetes.io/hostname` — node
+
+  On a `kind` cluster with one node, this does not do much. But
+  it is very important on real cloud clusters.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

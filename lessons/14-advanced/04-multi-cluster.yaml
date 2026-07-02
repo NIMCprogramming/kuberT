@@ -1,0 +1,35 @@
+id: 14-advanced/04-multi-cluster
+title: "Multi-cluster"
+module: advanced
+order: 4
+estimated_minutes: 8
+intro: |
+  # Many clusters, not one
+
+  As your company grows, one big cluster is not always the answer.
+  Real teams often run many clusters:
+  - one per region (Europe, USA, Asia)
+  - one per environment (`dev`, `stage`, `prod`)
+  - one per team (blast-radius)
+
+  Now you have new problems:
+  - How do users see all clusters?
+  - How does an app in cluster A call an app in cluster B?
+  - How do you keep 20 clusters in sync?
+
+  Common tools:
+  - **Cluster API (CAPI)** — create and manage clusters as
+    Kubernetes objects (yes, meta).
+  - **Karmada**, **Fleet**, **Open Cluster Management** — run one
+    control plane over many clusters.
+  - **Istio** or **Cilium Cluster Mesh** — connect Services
+    across clusters.
+  - **Argo CD ApplicationSets** — deploy the same app to many
+    clusters from one file.
+
+  Multi-cluster is a big topic. This lesson only names the tools
+  so you know where to look next.
+task: |
+  No task. Press `c`. Congratulations — you finished the roadmap!
+check:
+  type: manual

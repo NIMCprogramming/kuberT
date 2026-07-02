@@ -1,0 +1,32 @@
+id: 13-deployment-patterns/04-canary
+title: "Canary releases"
+module: deployment-patterns
+order: 4
+estimated_minutes: 6
+intro: |
+  # Canary release
+
+  A **canary** is a small test group. Miners used to take a canary
+  bird into a mine — if the bird died, they got out fast.
+
+  In deployments, a canary is a **small percentage of traffic**
+  that goes to the new version. If the canary looks healthy, you
+  slowly send more traffic to it. If it looks bad, you roll it
+  back before most users notice.
+
+  Simple canary on Kubernetes:
+  1. Deployment `web` has 9 Pods of `v1`.
+  2. Deployment `web-canary` has 1 Pod of `v2`.
+  3. Both are behind the same Service. Kubernetes load balances,
+     so ~10% of traffic hits `v2`.
+
+  Better tools:
+  - **Argo Rollouts** — a smart controller that shifts traffic in
+    steps and can auto-rollback.
+  - **Flagger** — same idea, works with Istio, Linkerd, and more.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

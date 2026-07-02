@@ -1,0 +1,50 @@
+id: 14-advanced/01-crds
+title: "Custom Resource Definitions (CRDs)"
+module: advanced
+order: 1
+estimated_minutes: 10
+intro: |
+  # CRDs — add your own kinds
+
+  Kubernetes has built-in resource kinds: `Pod`, `Deployment`,
+  `Service`, and so on. But you can add your own.
+
+  A **CustomResourceDefinition (CRD)** teaches the cluster a new
+  kind. After the CRD is applied, `kubectl` can list and edit
+  objects of that kind, just like Pods.
+
+  Example: an app team could add a `kind: Database`. Then
+  developers write:
+
+  ```
+  apiVersion: db.example.com/v1
+  kind: Database
+  metadata:
+    name: my-db
+  spec:
+    size: small
+    engine: postgres
+  ```
+
+  A CRD by itself does **nothing** — it only stores the data. To
+  make it useful, you also run a **controller** that watches
+  these objects and creates the real Pods/PVCs (next lesson).
+
+  This is how big projects like **cert-manager**, **Istio**, and
+  **Argo CD** extend Kubernetes.
+task: |
+  List CRDs that already exist on your cluster (`kind` has a few
+  from its default add-ons):
+
+  ```
+  kubectl get crd
+  ```
+
+  Then press `c`.
+hint: "kubectl get crd --no-headers | wc -l  -- count them"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl api-resources"
+  expect: "deployments"
+  timeout_seconds: 20

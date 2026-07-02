@@ -1,0 +1,33 @@
+id: 11-scheduling/04-priorities
+title: "Pod priority"
+module: scheduling
+order: 4
+estimated_minutes: 6
+intro: |
+  # Pod priority and preemption
+
+  Not all Pods are equal. Your payment service is more important
+  than a cron job that runs at night.
+
+  A **PriorityClass** gives Pods a number. Higher number = more
+  important.
+
+  What happens when a high-priority Pod cannot find a node?
+  - Kubernetes may **evict** (kick out) some low-priority Pods to
+    make room. That is called **preemption**.
+
+  Two built-in PriorityClasses in every cluster:
+  - `system-cluster-critical` (very high)
+  - `system-node-critical` (very very high, only for node agents)
+
+  You create your own for user apps:
+  - `low-prio` (value 100)
+  - `high-prio` (value 1000)
+
+  Use them wisely. If everything is `high-prio`, nothing is.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

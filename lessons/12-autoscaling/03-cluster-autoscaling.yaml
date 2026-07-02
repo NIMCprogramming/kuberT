@@ -1,0 +1,31 @@
+id: 12-autoscaling/03-cluster-autoscaling
+title: "Cluster autoscaling"
+module: autoscaling
+order: 3
+estimated_minutes: 6
+intro: |
+  # More or fewer nodes
+
+  HPA adds more Pods. But what if there are no free nodes to run
+  them?
+
+  A **Cluster Autoscaler** adds or removes **nodes**. It watches
+  for Pods that are `Pending` because of no space, and asks the
+  cloud for a new node. When nodes have almost no Pods, it
+  removes them.
+
+  Two big players today:
+  - **cluster-autoscaler** — the classic project. Works with node
+    groups on AWS, GCP, Azure.
+  - **Karpenter** — newer, from AWS. Picks the best node type on
+    the fly (Spot, ARM, ...). Very popular for EKS.
+
+  On a `kind` cluster there is no cloud, so no real cluster
+  autoscaling. But it is one of the most powerful things about
+  Kubernetes in the cloud.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

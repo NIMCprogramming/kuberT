@@ -1,0 +1,34 @@
+id: 13-deployment-patterns/05-blue-green
+title: "Blue-Green deployment"
+module: deployment-patterns
+order: 5
+estimated_minutes: 6
+intro: |
+  # Blue-Green
+
+  A **Blue-Green** deployment uses two full copies of the app:
+  - **Blue** — the current version, serving users.
+  - **Green** — the new version, running but with no traffic.
+
+  Steps:
+  1. Deploy `v2` next to `v1`. Both run.
+  2. Test `v2` in the cluster (internal URL, health checks).
+  3. Change the Service to point to `v2`. Traffic switches **all
+     at once**.
+  4. Keep `v1` up for a while. If `v2` breaks, switch back.
+  5. When `v2` is stable, delete `v1`.
+
+  Wins:
+  - Fast rollback: change the Service back.
+  - No half-updated state.
+
+  Costs:
+  - You run two full copies during the swap → more CPU/memory.
+  - Databases are hard: a new schema often does not work for both
+    versions.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

@@ -1,0 +1,33 @@
+id: 11-scheduling/05-evictions
+title: "Evictions"
+module: scheduling
+order: 5
+estimated_minutes: 6
+intro: |
+  # Eviction: when Kubernetes removes a Pod
+
+  An eviction is a **polite kill**. Kubernetes stops the Pod, but
+  it may start again somewhere else (if it is part of a
+  Deployment or StatefulSet).
+
+  When can a Pod be evicted?
+
+  1. **Node pressure.** The node is running out of memory or disk.
+     `kubelet` picks Pods to remove. Pods without CPU/memory
+     requests, or that use a lot, are removed first.
+  2. **API eviction.** An admin runs `kubectl drain <node>`. This
+     asks all Pods to move to other nodes, then marks the node
+     unusable. Used before a node reboot.
+  3. **Preemption.** A higher-priority Pod needs the space.
+  4. **Taint of type `NoExecute`.** A running Pod without a
+     matching toleration gets evicted.
+
+  To make evictions safer, add a **PodDisruptionBudget (PDB)**:
+  *"keep at least N Pods of my app alive at all times"*. Kubernetes
+  will not do voluntary evictions that break this rule.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

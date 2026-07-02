@@ -1,0 +1,57 @@
+id: 11-scheduling/02-taints-tolerations
+title: "Taints and tolerations"
+module: scheduling
+order: 2
+estimated_minutes: 10
+intro: |
+  # Taints and tolerations
+
+  A **taint** is a mark on a node that says: *"most Pods are not
+  welcome here"*. Example: a node with a GPU.
+
+  A **toleration** on a Pod says: *"I accept this taint"*. Only
+  Pods with the matching toleration can run on that node.
+
+  So: taints **repel** Pods; tolerations let one **through**.
+
+  Three effects:
+  - `NoSchedule` — new Pods without toleration cannot start here.
+  - `PreferNoSchedule` — soft version; the scheduler tries to
+    avoid it.
+  - `NoExecute` — even running Pods without toleration get evicted.
+
+  Real use cases:
+  - Reserve GPU nodes for ML Pods only.
+  - Keep the control-plane node free of user Pods (this is the
+    default!).
+task: |
+  Add a taint to a node, then remove it.
+
+  Find a node name:
+  ```
+  kubectl get nodes
+  ```
+
+  Add a taint (replace `<node>`):
+  ```
+  kubectl taint node <node> demo=yes:NoSchedule
+  ```
+
+  Check it:
+  ```
+  kubectl describe node <node> | grep Taints
+  ```
+
+  Then remove it (note the trailing `-`):
+  ```
+  kubectl taint node <node> demo=yes:NoSchedule-
+  ```
+
+  When done, press `c`.
+hint: "The trailing '-' at the end of the command removes the taint. Don't forget it!"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get nodes --no-headers"
+  expect: "Ready"
+  timeout_seconds: 15

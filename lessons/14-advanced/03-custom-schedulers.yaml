@@ -1,0 +1,33 @@
+id: 14-advanced/03-custom-schedulers
+title: "Custom schedulers"
+module: advanced
+order: 3
+estimated_minutes: 6
+intro: |
+  # Custom schedulers
+
+  The default Kubernetes scheduler is smart, but it does not
+  know everything about your business. Some teams need special
+  rules the default scheduler cannot express.
+
+  You have three levels of change, from small to big:
+
+  1. **Scheduler profiles.** Tweak the default scheduler with a
+     config file. Turn some plugins on or off.
+  2. **Second scheduler.** Run a second scheduler side by side.
+     Pods can pick which scheduler to use via
+     `spec.schedulerName`.
+  3. **Custom scheduler from scratch.** Rare. Only when the rules
+     are very special (batch jobs, HPC, machine learning
+     workloads).
+
+  Real projects:
+  - **Volcano** — batch scheduler for AI/ML jobs.
+  - **Kueue** — job queueing on top of the default scheduler.
+  - **Yunikorn** — big data / Spark on Kubernetes.
+
+  This lesson is for reading.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

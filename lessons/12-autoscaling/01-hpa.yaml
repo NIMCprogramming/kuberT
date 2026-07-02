@@ -1,0 +1,52 @@
+id: 12-autoscaling/01-hpa
+title: "Horizontal Pod Autoscaler (HPA)"
+module: autoscaling
+order: 1
+estimated_minutes: 10
+intro: |
+  # HPA — add and remove Pods
+
+  A **Horizontal Pod Autoscaler** watches a Deployment and:
+  - adds Pods when CPU (or another metric) is high
+  - removes Pods when CPU is low
+
+  "Horizontal" = more copies of the same Pod, side by side.
+  ("Vertical" = making one Pod bigger, next lesson.)
+
+  You set:
+  - `minReplicas` (e.g. 2)
+  - `maxReplicas` (e.g. 10)
+  - a target (e.g. "keep CPU around 60%")
+
+  HPA needs a metrics source. In most clusters that is
+  **metrics-server**. On `kind`, it is **not installed by
+  default**, so `kubectl autoscale` creates the HPA but it stays
+  in `<unknown>` for CPU. You will still learn the command.
+task: |
+  You need a Deployment first:
+
+  ```
+  kubectl create deployment web --image=nginx --replicas=1
+  ```
+
+  Now create an HPA for it:
+
+  ```
+  kubectl autoscale deployment web --min=1 --max=5 --cpu-percent=60
+  ```
+
+  Check it:
+
+  ```
+  kubectl get hpa web
+  ```
+
+  You should see the HPA with `MINPODS 1  MAXPODS 5`. Then press
+  `c`.
+hint: "To make the HPA actually scale, install metrics-server."
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get hpa web -o jsonpath='{.spec.maxReplicas}'"
+  expect: "5"
+  timeout_seconds: 15

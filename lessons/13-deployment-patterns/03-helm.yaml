@@ -1,0 +1,36 @@
+id: 13-deployment-patterns/03-helm
+title: "Helm — the K8s package manager"
+module: deployment-patterns
+order: 3
+estimated_minutes: 8
+intro: |
+  # Helm
+
+  **Helm** is like `apt` or `pip`, but for Kubernetes YAML.
+
+  Three words you need:
+  - **Chart** — a folder with YAML templates + a `values.yaml`
+    file. Ready to install.
+  - **Repository** — a place where charts live (like a Docker
+    registry, but for charts). Big names: `bitnami`, `ingress-nginx`.
+  - **Release** — one install of a chart, with a chosen name and
+    values. You can have many releases of the same chart.
+
+  Common commands:
+  ```
+  helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm install my-nginx bitnami/nginx
+  helm upgrade my-nginx bitnami/nginx --set replicaCount=3
+  helm uninstall my-nginx
+  ```
+
+  Helm shines when your project has many YAML files that only
+  differ by a few values (like image tag, replicas, hostname).
+  You keep one template and pass the values in.
+
+  This lesson is for reading only. The `helm` CLI is not installed
+  in this environment by default.
+task: |
+  No task. Press `c`.
+check:
+  type: manual
