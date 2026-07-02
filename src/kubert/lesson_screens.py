@@ -94,12 +94,14 @@ class LessonScreen(Screen[None]):
         return True, ""
 
     def action_do_primary(self) -> None:
+        log = self.query_one("#output", RichLog)
         if isinstance(self.lesson.check, ManualCheck):
             self._mark_complete()
-            self.action_do_next()
+            log.write("[green]Marked as read.[/green]")
+            log.write("[dim]Press [b]n[/b] for the next lesson, or [b]Esc[/b] to go back.[/dim]")
+            self.app.notify("Lesson complete! Press n for next.", severity="information")
             return
         ok, msg = self._check_req()
-        log = self.query_one("#output", RichLog)
         if not ok:
             log.write(f"[red]{msg}[/red]")
             return
