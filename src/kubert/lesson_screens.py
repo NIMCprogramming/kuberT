@@ -13,7 +13,7 @@ from kubert.state import load_progress, save_progress
 
 class LessonItem(ListItem):
     def __init__(self, lesson: Lesson, marker: str) -> None:
-        super().__init__(Label(f"{marker} {lesson.id} - {lesson.title}"))
+        super().__init__(Label(f"{marker} {lesson.id} - {lesson.title}", markup=False))
         self.lesson = lesson
 
 
