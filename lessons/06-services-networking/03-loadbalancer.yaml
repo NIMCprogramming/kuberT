@@ -1,0 +1,35 @@
+id: 06-services-networking/03-loadbalancer
+title: "LoadBalancer and Ingress"
+module: services-networking
+order: 3
+estimated_minutes: 6
+intro: |
+  # LoadBalancer
+
+  A **LoadBalancer** Service asks the cloud (AWS, GCP, Azure, ...)
+  for a **public IP address**. The cloud sends traffic from that
+  IP into your cluster.
+
+  Nice, but two problems for beginners:
+  - On a laptop cluster (`kind`, `minikube`), there is **no
+    cloud**. The Service stays in `<pending>` forever.
+  - Each LoadBalancer Service = one public IP. If you have 20 apps,
+    that is 20 IPs — and often 20 bills.
+
+  ## Ingress
+
+  An **Ingress** is smarter. One public IP, many apps. The Ingress
+  looks at the URL:
+  - `shop.example.com` → the shop Service
+  - `api.example.com`  → the API Service
+
+  You need an **Ingress controller** running in the cluster to make
+  Ingress work (nginx-ingress, Traefik, ...). On `kind` you can
+  install one, but this lesson is only for reading.
+
+  **Take-away:** for local learning, use NodePort. For real
+  clusters, use Ingress.
+task: |
+  No task. Just read. Press `c`.
+check:
+  type: manual

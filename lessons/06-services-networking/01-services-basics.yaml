@@ -1,0 +1,52 @@
+id: 06-services-networking/01-services-basics
+title: "Services basics"
+module: services-networking
+order: 1
+estimated_minutes: 10
+intro: |
+  # Services
+
+  Pods come and go. Each new Pod gets a new IP address. So how do
+  other Pods find your app?
+
+  Answer: a **Service**. A Service is a **stable name and IP** in
+  front of a group of Pods. Kubernetes updates the group for you
+  as Pods come and go.
+
+  The Service uses a **label selector** to pick Pods. Example:
+  `app=web`. Every Pod with that label is behind the Service.
+
+  Three main Service types:
+  - **ClusterIP** — only inside the cluster (the default).
+  - **NodePort** — open a port on every node.
+  - **LoadBalancer** — ask the cloud for a public IP.
+
+  This lesson only makes a **ClusterIP** Service.
+task: |
+  You need a Deployment first. If you deleted `web` earlier, make
+  it again:
+
+  ```
+  kubectl create deployment web --image=nginx --replicas=2
+  ```
+
+  Now put a Service in front of it on port 80:
+
+  ```
+  kubectl expose deployment web --port=80 --target-port=80 --name=web
+  ```
+
+  Check it:
+
+  ```
+  kubectl get svc web
+  ```
+
+  You should see a **CLUSTER-IP**. Then press `c`.
+hint: "kubectl get endpoints web  -- lists the Pod IPs behind the Service"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get svc web -o jsonpath='{.spec.type}'"
+  expect: "ClusterIP"
+  timeout_seconds: 15

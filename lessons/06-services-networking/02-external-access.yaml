@@ -1,0 +1,44 @@
+id: 06-services-networking/02-external-access
+title: "External access with NodePort"
+module: services-networking
+order: 2
+estimated_minutes: 10
+intro: |
+  # NodePort
+
+  A **ClusterIP** Service is only visible inside the cluster. To
+  let people outside the cluster reach your app, you need something
+  more.
+
+  A **NodePort** Service opens **the same port on every node** in
+  the cluster. Someone outside can then call `NODE_IP:NODE_PORT`
+  and hit your app.
+
+  A NodePort works, but it is not pretty:
+  - The port is a big number, like `31234`.
+  - You must know a node's IP.
+
+  In real projects you often put an **Ingress** or a
+  **LoadBalancer** in front. But NodePort is good to learn first.
+task: |
+  Turn the `web` Service from the last lesson into a NodePort:
+
+  ```
+  kubectl patch svc web -p '{"spec":{"type":"NodePort"}}'
+  ```
+
+  Look at the assigned node port:
+
+  ```
+  kubectl get svc web
+  ```
+
+  You should see a port like `80:3XXXX/TCP` in the PORT(S) column.
+  Then press `c`.
+hint: "kubectl get svc web -o jsonpath='{.spec.ports[0].nodePort}'  -- shows the node port"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get svc web -o jsonpath='{.spec.type}'"
+  expect: "NodePort"
+  timeout_seconds: 15

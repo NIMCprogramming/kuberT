@@ -1,0 +1,47 @@
+id: 05-configuration/01-configmaps
+title: "ConfigMaps"
+module: configuration
+order: 1
+estimated_minutes: 10
+intro: |
+  # ConfigMaps
+
+  A **ConfigMap** stores settings for your app in the cluster —
+  things like:
+  - a URL for another service
+  - a feature flag (`ENABLE_NEW_UI=true`)
+  - a small config file
+
+  You keep the app image the same. Only the ConfigMap changes when
+  the settings change.
+
+  A Pod can read a ConfigMap in two ways:
+  1. As **environment variables**.
+  2. As **files** in a folder (each key becomes one file).
+
+  Do **not** put passwords or tokens in a ConfigMap. Use a
+  **Secret** for that (next lesson).
+task: |
+  Create a ConfigMap named `app-config` with one key:
+  `GREETING=hello`.
+
+  ```
+  kubectl create configmap app-config --from-literal=GREETING=hello
+  ```
+
+  Check it exists:
+
+  ```
+  kubectl get configmap app-config -o yaml
+  ```
+
+  Then press `c`.
+
+  Clean up with: `kubectl delete configmap app-config`
+hint: "kubectl describe configmap app-config  -- shows the data too"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get configmap app-config -o jsonpath='{.data.GREETING}'"
+  expect: "hello"
+  timeout_seconds: 15

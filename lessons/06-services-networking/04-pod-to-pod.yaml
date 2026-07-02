@@ -1,0 +1,45 @@
+id: 06-services-networking/04-pod-to-pod
+title: "Pod-to-Pod networking"
+module: services-networking
+order: 4
+estimated_minutes: 10
+intro: |
+  # How Pods talk to each other
+
+  Inside a cluster:
+  - Every Pod has its own IP address.
+  - Every Pod can reach every other Pod by IP, on any port.
+  - No NAT between Pods. This is a key Kubernetes rule.
+
+  But you should not call Pods by IP. Pod IPs change. Use the
+  **Service name** instead.
+
+  Kubernetes has a small DNS server in the cluster. When you make a
+  Service named `web` in namespace `default`, other Pods can call
+  it as:
+
+  ```
+  http://web.default.svc.cluster.local
+  ```
+
+  Or just `http://web` if they are in the same namespace.
+task: |
+  Start a small test Pod that has `curl` and call the `web`
+  Service by name.
+
+  ```
+  kubectl run tester --rm -it --restart=Never --image=curlimages/curl -- \
+    curl -s -o /dev/null -w "%{http_code}\n" http://web
+  ```
+
+  The command should print `200`. That means DNS worked and the
+  Service sent the request to a Pod. When you see `200`, press `c`.
+
+  (The `tester` Pod deletes itself when the command ends.)
+hint: "If you get 'Could not resolve host: web', make sure the web Service exists: kubectl get svc web"
+requires: [cluster]
+check:
+  type: command
+  cmd: "kubectl get svc web -o jsonpath='{.spec.clusterIP}'"
+  expect: "."
+  timeout_seconds: 15

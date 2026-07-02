@@ -1,0 +1,31 @@
+id: 07-security/03-pod-security
+title: "Pod security"
+module: security
+order: 3
+estimated_minutes: 10
+intro: |
+  # Pod security
+
+  A container is not a strong sandbox. If a Pod runs as **root**
+  and mounts the host disk, a bad app can hurt the whole node.
+
+  Small rules that make Pods safer:
+  - **Do not run as root.** Set `runAsNonRoot: true` and pick a
+    user ID like `1000`.
+  - **Read-only root filesystem.** Set `readOnlyRootFilesystem:
+    true`. The container can only write to volumes you allow.
+  - **Drop capabilities.** Linux gives root many powers ("caps").
+    Drop them all and only add the ones you truly need.
+  - **No `privileged: true`.** That mode gives the container full
+    host access.
+
+  Kubernetes has a feature called **Pod Security Admission** to
+  enforce a security level for a namespace: `privileged`,
+  `baseline`, or `restricted`.
+
+  This lesson is for reading. Later lessons will build Pods with
+  these settings.
+task: |
+  No task. Press `c`.
+check:
+  type: manual

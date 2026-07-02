@@ -1,0 +1,26 @@
+id: 07-security/02-network-policies
+title: "Network policies"
+module: security
+order: 2
+estimated_minutes: 8
+intro: |
+  # Network policies
+
+  By default, every Pod can talk to every other Pod. That is not
+  safe. A hacker in one Pod can then talk to your database Pod.
+
+  A **NetworkPolicy** is a firewall for Pods. You choose:
+  - which Pods it applies to (by label)
+  - which **incoming** traffic is allowed (ingress rules)
+  - which **outgoing** traffic is allowed (egress rules)
+
+  Big warning: NetworkPolicies only work if your cluster has a
+  **CNI plugin** that supports them (Calico, Cilium, ...).
+
+  **Kind's default CNI does not enforce them.** So on this cluster
+  you can *write* a policy, but it will not block traffic. This
+  lesson is for reading only.
+task: |
+  No task. Press `c` to mark as read.
+check:
+  type: manual
