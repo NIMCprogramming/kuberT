@@ -3,6 +3,12 @@ title: "Services basics"
 module: services-networking
 order: 1
 estimated_minutes: 20
+learning_goal: "Put a ClusterIP Service in front of a Deployment and confirm its Endpoints match the Pod IPs."
+prerequisites:
+  - pods
+  - labels
+  - deployment
+  - kubectl
 intro: |
   # Services
 
@@ -49,6 +55,19 @@ intro: |
   kubectl describe svc demo
   kubectl get endpoints demo
   ```
+warm_up:
+  - prompt: "What is a Pod, and why can we NOT use its IP for a stable address?"
+    answer: "A Pod is the smallest unit — one (or a few) containers with a shared IP. Its IP changes each time the Pod is recreated, so it is not stable."
+    kind: recall
+    concept: pods
+  - prompt: "You have Pods with `labels: { app: shop }`. Which command lists only those Pods?"
+    answer: "`kubectl get pods -l app=shop` (or `--selector app=shop`)."
+    kind: recall
+    concept: labels
+  - prompt: "What does a Deployment give you that a stand-alone Pod does not?"
+    answer: "A Deployment keeps N Pods running. If a Pod dies, it makes a new one. It also handles rolling updates."
+    kind: recall
+    concept: deployment
 task: |
   **Your turn — build it yourself, do not copy the example.**
 
@@ -91,6 +110,82 @@ hint: |
   - For the Service: `--port` is the SERVICE port (what clients dial), `--target-port` is the container port (where nginx listens). They are different in this task.
   - Endpoints appear only when the Pods are Ready. If you see `<none>`, wait a few seconds or check `kubectl get pods -l app=shop`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You created the Deployment and Service. Pods are Running, but:
+    ```
+    $ kubectl get endpoints shop-svc
+    NAME       ENDPOINTS   AGE
+    shop-svc   <none>      1m
+    ```
+    Your Service YAML:
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata: { name: shop-svc }
+    spec:
+      selector: { app: shop-svc }   # <-- note the value
+      ports:
+        - { port: 8080, targetPort: 80 }
+    ```
+  question: "Why are there zero endpoints?"
+  diagnosis: |
+    The Service selector says `app: shop-svc`, but the Deployment's
+    Pods have label `app: shop` (that is the default when you run
+    `kubectl create deployment shop ...`). The selector matches
+    nothing, so endpoints are empty.
+
+    How to check:
+    - `kubectl get pods --show-labels` — see the real labels.
+    - `kubectl describe svc shop-svc` — see `Selector:` and
+      `Endpoints:`.
+
+    Fix: change the selector to `app: shop` (or add label
+    `app: shop-svc` to the Pod template) and re-apply.
+  concept: labels
+review_questions:
+  - prompt: "What does `--port=8080 --target-port=80` mean?"
+    kind: multiple_choice
+    options:
+      - "Clients dial 80; the container listens on 8080"
+      - "Clients dial 8080 on the Service; the container listens on 80"
+      - "The node opens both ports for external users"
+      - "Two Services are created"
+    answer: "Clients dial 8080 on the Service; the container listens on 80."
+    concept: services-clusterip
+  - prompt: "`kubectl get endpoints shop-svc` returns `<none>`, but 3 Pods are Running. What is the most likely cause?"
+    kind: debug
+    answer: "The Service selector does not match the Pod labels. Check `kubectl describe svc shop-svc` (Selector) and `kubectl get pods --show-labels`."
+    concept: labels
+  - prompt: "You delete one shop Pod. What happens to the Service and its endpoints?"
+    kind: scenario
+    answer: "The Deployment starts a new Pod with a new IP. Kubernetes updates the Endpoints list automatically. Clients keep using the Service name — they never notice."
+    concept: services-clusterip
+  - prompt: "Which Service type is used to reach the Service from OUTSIDE the cluster?"
+    kind: recall
+    answer: "`ClusterIP` is inside only. Use `NodePort` (next lesson) or `LoadBalancer` / `Ingress` for outside access."
+    concept: services-clusterip
+common_mistakes:
+  - mistake: "Selector does not match Pod labels — 0 endpoints, and no error."
+    fix: "Always cross-check `spec.selector` on the Service with `metadata.labels` on the Pods."
+  - mistake: "Swapping `port` and `targetPort`. Clients get connection refused."
+    fix: "`port` = what clients dial on the Service. `targetPort` = what the container listens on. Different concepts."
+  - mistake: "Calling the Service by Pod IP after the Pod restarts."
+    fix: "Use the Service DNS name, not Pod IPs. Pod IPs change; Service names do not."
+summary: |
+  A Service is a stable name + IP in front of a moving set of
+  Pods, picked by label selector. Endpoints show the current Pod
+  IPs. Match selector to labels, split `port` from `targetPort`,
+  and clients get a rock-solid address.
+spaced_hooks:
+  - concept: services-clusterip
+    when: next
+  - concept: services-clusterip
+    when: "2-3"
+  - concept: services-clusterip
+    when: "5-7"
+  - concept: services-clusterip
+    when: capstone
 cheat: |
   ### Services
   Stable IP + DNS name in front of a group of Pods (picked by label).

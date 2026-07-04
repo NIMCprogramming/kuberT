@@ -3,6 +3,11 @@ title: "Pod-to-Pod networking"
 module: services-networking
 order: 5
 estimated_minutes: 12
+learning_goal: "Call a Service by DNS name from another Pod and see why Pod IPs are not stable enough to use directly."
+prerequisites:
+  - pods
+  - services-clusterip
+  - labels
 intro: |
   # How Pods talk to each other
 
@@ -38,7 +43,19 @@ intro: |
   - `--restart=Never` — plain Pod, not a Deployment.
   - `--image=curlimages/curl` — a tiny image with `curl` inside.
   - Everything after `--` is the command to run.
-
+warm_up:
+  - prompt: "What does a Service ClusterIP give you that a Pod IP does not?"
+    answer: "A stable name and IP that stay the same even when Pods die and get replaced with new IPs."
+    kind: recall
+    concept: services-clusterip
+  - prompt: "Pods with `labels: { app: shop }` — how does the Service pick them?"
+    answer: "Its `spec.selector` matches those labels. Any Pod with `app: shop` becomes an endpoint of the Service."
+    kind: recall
+    concept: labels
+  - prompt: "A Service has 0 endpoints even though Pods are Running. Where do you look?"
+    answer: "Selector vs labels mismatch. `kubectl describe svc NAME` (Selector) and `kubectl get pods --show-labels`."
+    kind: debug
+    concept: labels
 task: |
   **Your goal:** call `shop-svc` (from earlier lessons) by name
   and by IP from a temporary Pod.
@@ -59,6 +76,70 @@ hint: |
   - Test one call: run a tester Pod as shown in the intro, replacing TARGET with `shop-svc:8080` or the Pod IP (e.g. `10.244.0.5`).
   - Delete a Pod: `kubectl delete pod <name>`. The Deployment/ReplicaSet makes a new one with a fresh IP — this is why you use the Service name in real code.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    Your app config says:
+    ```
+    BACKEND_URL=http://10.244.0.7:8080
+    ```
+    It worked yesterday. Today the backend Pod restarted and now
+    every call times out.
+  question: "What went wrong and how do you fix the URL?"
+  diagnosis: |
+    You used the **Pod IP** in the config. When the backend Pod
+    was recreated, it got a new IP (say `10.244.0.42`). Nothing
+    tells your app to update.
+
+    Fix: use the **Service DNS name**, e.g.
+    ```
+    BACKEND_URL=http://backend.default.svc.cluster.local:8080
+    ```
+    or `http://backend:8080` if you are in the same namespace.
+    The Service tracks the current Pod IPs for you.
+  concept: pod-dns
+review_questions:
+  - prompt: "Which URL should an app in namespace `web` use to call Service `db` in namespace `data`?"
+    kind: multiple_choice
+    options:
+      - "`http://db`"
+      - "`http://db.data`"
+      - "`http://db.web.svc.cluster.local`"
+      - "The Pod IP of one `db` Pod"
+    answer: "`http://db.data` (or the fully-qualified `db.data.svc.cluster.local`)."
+    concept: pod-dns
+  - prompt: "You call `http://shop-svc:8080` from a tester Pod and get `Could not resolve host`. Most likely cause?"
+    kind: debug
+    answer: "Wrong namespace. Either the Service is in a different namespace than the tester Pod, or CoreDNS is not running. Try the fully-qualified name `shop-svc.default.svc.cluster.local`."
+    concept: pod-dns
+  - prompt: "Why is using a Pod IP directly a bad idea for long-lived config?"
+    kind: recall
+    answer: "Pod IPs change on every restart or reschedule. The next time the Pod is recreated, your config points at nothing."
+    concept: pod-dns
+  - prompt: "Debug tip: which one-liner shows what DNS resolves `web` to inside a Pod?"
+    kind: scenario
+    answer: "`kubectl run t --rm -it --restart=Never --image=busybox -- nslookup web` (or use `dig` with a debug image)."
+    concept: pod-dns
+common_mistakes:
+  - mistake: "Hard-coding a Pod IP into an env var or config file."
+    fix: "Use the Service DNS name. Kubernetes updates the Endpoints list; your app never has to."
+  - mistake: "Cross-namespace call using only the short name (`db` instead of `db.data`)."
+    fix: "Short name only works within the same namespace. Add `.NAMESPACE` (or the full FQDN) for cross-namespace."
+  - mistake: "Assuming DNS is broken because one Pod cannot resolve names."
+    fix: "Check CoreDNS Pods in `kube-system` first: `kubectl -n kube-system get pods -l k8s-app=kube-dns`."
+summary: |
+  Every Pod can reach every Pod, but you should call **Services**
+  by DNS name, not Pod IPs. `svc`, `svc.namespace`, and the full
+  `svc.namespace.svc.cluster.local` all work — pick the shortest
+  form your namespace allows. Pod IPs change; names do not.
+spaced_hooks:
+  - concept: pod-dns
+    when: next
+  - concept: pod-dns
+    when: "2-3"
+  - concept: pod-dns
+    when: "5-7"
+  - concept: pod-dns
+    when: capstone
 cheat: |
   ### Pod-to-Pod networking
   - Every Pod has its own IP; every Pod can reach every other by IP (no NAT).

@@ -3,6 +3,12 @@ title: "LoadBalancer and Ingress (with Traefik)"
 module: services-networking
 order: 4
 estimated_minutes: 25
+learning_goal: "Install Traefik with Helm, create an Ingress with a host rule, and reach a Service through the Ingress controller."
+prerequisites:
+  - services-clusterip
+  - nodeport
+  - helm
+  - deployment
 intro: |
   # LoadBalancer and Ingress
 
@@ -58,7 +64,19 @@ intro: |
                   port:
                     number: SVC_PORT
   ```
-
+warm_up:
+  - prompt: "What are the three main Service types?"
+    answer: "`ClusterIP` (inside only), `NodePort` (port on every node), `LoadBalancer` (cloud gives a public IP)."
+    kind: recall
+    concept: services-clusterip
+  - prompt: "On kind, why does a `LoadBalancer` Service stay `<pending>`?"
+    answer: "There is no cloud provider to allocate a public IP. Kind runs in Docker on your laptop."
+    kind: recall
+    concept: nodeport
+  - prompt: "You added a Helm repo and `helm install` says 'chart not found'. What did you skip?"
+    answer: "`helm repo update`. Refresh the local chart index after adding a repo."
+    kind: debug
+    concept: helm
 task: |
   **Your goal:** install Traefik, expose an app through it, and
   reach the app by **hostname**.
@@ -143,6 +161,85 @@ hint: |
   - If curl returns `404`, the Host header does not match. Double-check the value inside `-H "Host: myshop.local"`.
   - If the ingressclass is missing after install, wait a bit more, then `kubectl get ingressclass -A`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    Traefik is Ready. Your Ingress is applied. curl returns `404
+    Not Found`:
+    ```
+    $ curl -H "Host: myshop.local" http://127.0.0.1:8080/
+    404 page not found
+    ```
+    Your Ingress:
+    ```yaml
+    spec:
+      ingressClassName: nginx   # <-- note this
+      rules:
+        - host: myshop.local
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service: { name: webshop, port: { number: 80 } }
+    ```
+  question: "Why does Traefik not route this?"
+  diagnosis: |
+    The Ingress says `ingressClassName: nginx`, but the only
+    controller running is Traefik (class `traefik`). Traefik
+    ignores Ingresses that belong to other classes, so nothing
+    routes to your Service.
+
+    How to see it:
+    - `kubectl get ingressclass` — lists installed classes.
+    - `kubectl describe ingress webshop` — the class is at the
+      top; Address stays empty.
+
+    Fix: `ingressClassName: traefik` and re-apply.
+  concept: ingress
+review_questions:
+  - prompt: "What happens to a `type: LoadBalancer` Service on `kind` without extra tools?"
+    kind: multiple_choice
+    options:
+      - "It gets a public IP from the kind network"
+      - "It stays `<pending>` forever (no cloud provider)"
+      - "It falls back to NodePort automatically"
+      - "It fails with an error"
+    answer: "It stays `<pending>` forever (no cloud provider)."
+    concept: ingress
+  - prompt: "An Ingress resource is applied but nothing happens. What must exist too?"
+    kind: recall
+    answer: "An Ingress **controller** (like Traefik or ingress-nginx) running in the cluster. The Ingress resource alone is just a rule; the controller reads it and does the routing."
+    concept: ingress
+  - prompt: "curl to the Ingress returns 404 but the Service works when you call it directly. First thing to check?"
+    kind: debug
+    answer: "The `Host:` header your request sends vs `spec.rules[0].host`. Mismatch = the controller has no rule for that hostname and returns 404."
+    concept: ingress
+  - prompt: "You want the same Ingress controller to serve two apps at different paths. How?"
+    kind: scenario
+    answer: "One Ingress with two `paths` entries, each pointing to a different Service. Or two Ingress resources with different `host`/`path` — the controller merges them."
+    concept: ingress
+common_mistakes:
+  - mistake: "Wrong `ingressClassName` (e.g. `nginx` when only Traefik is installed)."
+    fix: "List classes with `kubectl get ingressclass`. Use one that has a running controller."
+  - mistake: "Testing without a `Host:` header. Traefik returns 404 because no rule matches an empty host."
+    fix: "Always send `-H \"Host: myshop.local\"` when the Ingress rule pins a host."
+  - mistake: "Expecting a public IP on kind's LoadBalancer Service."
+    fix: "Use `port-forward`, a tester Pod, or install MetalLB for LoadBalancer to work on kind."
+summary: |
+  On the cloud, `type: LoadBalancer` gets you a public IP. On
+  kind, you install an Ingress controller (Traefik) and route
+  traffic by host/path with an Ingress resource. Get the
+  `ingressClassName` and `Host:` header right and the app is
+  live.
+spaced_hooks:
+  - concept: ingress
+    when: next
+  - concept: ingress
+    when: "2-3"
+  - concept: ingress
+    when: "5-7"
+  - concept: ingress
+    when: capstone
 cheat: |
   ### LoadBalancer and Ingress
   - `type: LoadBalancer` — asks the **cloud** for a public IP. On kind: stays `<pending>`.

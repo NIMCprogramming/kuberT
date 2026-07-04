@@ -3,6 +3,11 @@ title: "Helm — a quick intro (needed for Ingress)"
 module: services-networking
 order: 3
 estimated_minutes: 15
+learning_goal: "Install a Helm chart into your cluster and list the resulting release."
+prerequisites:
+  - kubectl
+  - deployment
+  - services-clusterip
 intro: |
   # Helm — the package manager for Kubernetes
 
@@ -57,6 +62,19 @@ intro: |
   ```
   curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   ```
+warm_up:
+  - prompt: "You applied a Deployment YAML. Which command shows the Pods it created?"
+    answer: "`kubectl get pods -l app=NAME` (using the Deployment's label). Or `kubectl get pods` for everything in the namespace."
+    kind: recall
+    concept: deployment
+  - prompt: "What is a Service ClusterIP good for?"
+    answer: "A stable name + IP inside the cluster so other Pods can call the app by name (like `shop-svc:8080`)."
+    kind: recall
+    concept: services-clusterip
+  - prompt: "What are two ways to change what `kubectl` does when a Service is not reachable?"
+    answer: "Check the wrong namespace (`-n`) or the wrong context (`--context`). Both are classic kubectl basics traps."
+    kind: recall
+    concept: kubectl-basics
 task: |
   **Your goal:** install Helm (if missing) and install a tiny
   demo chart so you see the flow.
@@ -88,6 +106,70 @@ hint: |
   - See resources the chart created: `kubectl get all -l app.kubernetes.io/instance=web`
   - If `helm install` fails with *"chart requires kubeVersion: X"*, your cluster is too old — but `kind` v1.32 is fine.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    Fresh shell. You run:
+    ```
+    $ helm install web bitnami/nginx
+    Error: INSTALLATION FAILED: failed to download "bitnami/nginx"
+    ```
+    But `helm repo list` shows `bitnami` is added.
+  question: "What step did you skip?"
+  diagnosis: |
+    You added the repo but never refreshed its index. Helm has
+    no idea what charts live in `bitnami` yet.
+
+    Fix:
+    ```
+    helm repo update
+    helm install web bitnami/nginx
+    ```
+    Rule of thumb: run `helm repo update` after `helm repo add`
+    and before `helm install`.
+  concept: helm
+review_questions:
+  - prompt: "Match the word to its meaning: Chart, Repository, Release."
+    kind: multiple_choice
+    options:
+      - "Chart = one install; Repository = template folder; Release = source of charts"
+      - "Chart = template folder; Repository = source of charts; Release = one install"
+      - "Chart = kubectl plugin; Repository = git repo; Release = version tag"
+      - "Chart = YAML file; Repository = namespace; Release = Pod name"
+    answer: "Chart = template folder; Repository = source of charts; Release = one install."
+    concept: helm
+  - prompt: "You changed a value and want to apply it to a running release. Which command?"
+    kind: recall
+    answer: "`helm upgrade RELEASE CHART -f values.yaml` (or `--set key=val`)."
+    concept: helm
+  - prompt: "The last release broke prod. How do you go back?"
+    kind: scenario
+    answer: "`helm history RELEASE` to see revisions, then `helm rollback RELEASE REV`."
+    concept: helm
+  - prompt: "You want to see the YAML a chart will apply, WITHOUT installing. How?"
+    kind: recall
+    answer: "`helm template RELEASE CHART` or `helm install --dry-run --debug ...`."
+    concept: helm
+common_mistakes:
+  - mistake: "Forgetting `helm repo update` after `helm repo add`. Install fails with 'chart not found'."
+    fix: "Run `helm repo update` before any `helm install` on a fresh repo."
+  - mistake: "Editing the resources Helm created with `kubectl edit`."
+    fix: "Next `helm upgrade` will overwrite your edits. Change `values.yaml` or `--set` instead."
+  - mistake: "Installing two releases with the same name in the same namespace."
+    fix: "Release name must be unique per namespace. Pick a different name or use `-n` to put it elsewhere."
+summary: |
+  Helm packages Kubernetes YAML as **Charts** you install as
+  **Releases** from **Repositories**. `helm install` /
+  `upgrade` / `rollback` / `uninstall` is your daily loop.
+  With this, the next lesson can install Traefik in one line.
+spaced_hooks:
+  - concept: helm
+    when: next
+  - concept: helm
+    when: "2-3"
+  - concept: helm
+    when: "5-7"
+  - concept: helm
+    when: capstone
 cheat: |
   ### Helm quick reference
   - Chart = package, Repository = source, Release = one install.

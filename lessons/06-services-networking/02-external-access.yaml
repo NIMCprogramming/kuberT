@@ -3,6 +3,11 @@ title: "External access with NodePort"
 module: services-networking
 order: 2
 estimated_minutes: 12
+learning_goal: "Convert a ClusterIP Service into a NodePort with a pinned port so it is reachable outside the cluster."
+prerequisites:
+  - services-clusterip
+  - labels
+  - kubectl
 intro: |
   # NodePort
 
@@ -35,7 +40,19 @@ intro: |
 
   Kubernetes picks a free node port automatically, or you can set
   one in the YAML with `nodePort: 30080`.
-
+warm_up:
+  - prompt: "What is the default Service type, and where can it be reached from?"
+    answer: "`ClusterIP`. It is reachable only from inside the cluster."
+    kind: recall
+    concept: services-clusterip
+  - prompt: "In a Service, `--port` and `--target-port` mean what?"
+    answer: "`--port` is the port on the Service (clients dial). `--target-port` is the port on the container (where the app listens)."
+    kind: recall
+    concept: services-clusterip
+  - prompt: "Your Service has 0 endpoints even though Pods are Running. Where do you look first?"
+    answer: "The Service selector vs the Pod labels. Run `kubectl describe svc NAME` and `kubectl get pods --show-labels`."
+    kind: debug
+    concept: labels
 task: |
   **Your goal:** turn your `shop-svc` Service from the last lesson
   into a NodePort with a **specific** node port.
@@ -54,6 +71,76 @@ hint: |
   - Or edit the YAML: `kubectl edit svc shop-svc`, then change `type` and add `nodePort: 30080`.
   - Verify: `kubectl get svc shop-svc` (look at PORT(S) column) and `kubectl get svc shop-svc -o jsonpath='{.spec.ports[0].nodePort}'`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You patched `shop-svc` to `NodePort` on port `30080`, but
+    `curl http://127.0.0.1:30080/` from your laptop fails with
+    "Connection refused". Cluster runs on kind. Inside the
+    cluster this works:
+    ```
+    kubectl exec deploy/shop -- curl -s http://shop-svc:8080
+    ```
+  question: "Why can't you reach the NodePort from your laptop?"
+  diagnosis: |
+    On `kind`, the node is a Docker container. Its ports are not
+    published to the host by default. The Service opens 30080 on
+    the node — but the node's 30080 is inside Docker, not on
+    your laptop.
+
+    Fix (once, when you create the cluster): declare port mappings
+    in the kind config.
+    ```yaml
+    kind: Cluster
+    apiVersion: kind.x-k8s.io/v1alpha4
+    nodes:
+      - role: control-plane
+        extraPortMappings:
+          - containerPort: 30080
+            hostPort: 30080
+    ```
+    Then `kind create cluster --config kind-config.yaml`.
+  concept: nodeport
+review_questions:
+  - prompt: "What range of ports does NodePort use by default?"
+    kind: multiple_choice
+    options:
+      - "1–1024"
+      - "8000–9000"
+      - "30000–32767"
+      - "Any port you want"
+    answer: "30000–32767."
+    concept: nodeport
+  - prompt: "Which command changes a Service to NodePort in place?"
+    kind: recall
+    answer: "`kubectl patch svc NAME -p '{\"spec\":{\"type\":\"NodePort\"}}'` — or `kubectl edit svc NAME` and change `type`."
+    concept: nodeport
+  - prompt: "You set `nodePort: 30080` but it fails with `provided port is not in the valid range`. What did you probably do?"
+    kind: debug
+    answer: "The port is outside 30000–32767, or another Service already claimed it. Pick a free port in the allowed range, or let Kubernetes choose."
+    concept: nodeport
+  - prompt: "A user says 'I want a public URL, not `NODE_IP:30080`.' What do you offer next?"
+    kind: scenario
+    answer: "An **Ingress** with a hostname (module 06-04). One entry point, many rules — nicer than NodePort per app."
+    concept: ingress
+common_mistakes:
+  - mistake: "Using a low port like `nodePort: 8080`. API rejects it."
+    fix: "Stay in the 30000–32767 range unless the cluster admin widened it."
+  - mistake: "Expecting NodePort to work on kind without `extraPortMappings`."
+    fix: "Add `extraPortMappings` in the kind config, or reach the Service via `kubectl port-forward`."
+  - mistake: "Using NodePort in production and giving the URL to real users."
+    fix: "Put an Ingress or a cloud LoadBalancer in front. NodePort is a debug tool, not a product URL."
+summary: |
+  NodePort opens the same port on every node so outside traffic
+  can reach your Pods. Use a pinned `nodePort` in the 30000–32767
+  range when you must know it. On kind, remember port mappings.
+  For real users, Ingress is nicer — coming next.
+spaced_hooks:
+  - concept: nodeport
+    when: next
+  - concept: nodeport
+    when: "2-3"
+  - concept: services-clusterip
+    when: "2-3"
 cheat: |
   ### NodePort
   - Same port opened on **every** node. Range 30000–32767 by default.
