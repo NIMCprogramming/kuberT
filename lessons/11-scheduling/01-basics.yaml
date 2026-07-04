@@ -3,6 +3,11 @@ title: "Scheduling basics"
 module: scheduling
 order: 1
 estimated_minutes: 8
+learning_goal: "Explain how the scheduler picks a node and name the tools that guide the choice."
+prerequisites:
+  - pods
+  - requests-limits
+  - labels
 intro: |
   # How does Kubernetes pick a node for a Pod?
 
@@ -26,6 +31,19 @@ intro: |
   On a `kind` cluster, you usually have only one worker node, so
   scheduling choice is small. But the ideas are the same on real
   clusters.
+warm_up:
+  - prompt: "What does `resources.requests.cpu: 500m` mean?"
+    answer: "The container asks for half a CPU core. The scheduler adds requests to check the node still has room."
+    kind: recall
+    concept: requests-limits
+  - prompt: "What is a label on a Pod, in one sentence?"
+    answer: "A key/value tag on the Pod's metadata. Services and selectors use labels to find Pods."
+    kind: recall
+    concept: labels
+  - prompt: "Where does a Pod actually run?"
+    answer: "On a node (a worker machine). The scheduler chooses which node when the Pod is created."
+    kind: recall
+    concept: pods
 task: |
   Look at the nodes and their labels:
 
@@ -39,6 +57,79 @@ task: |
   When you have looked at them, press `c`.
 hint: "kubectl label node <name> disk=ssd  -- add a label to a node"
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You created this Pod:
+    ```yaml
+    apiVersion: v1
+    kind: Pod
+    metadata: { name: heavy }
+    spec:
+      containers:
+        - name: c
+          image: nginx
+          resources:
+            requests: { cpu: "8", memory: "16Gi" }
+    ```
+    `kubectl get pod heavy` shows STATUS `Pending`.
+    `kubectl describe pod heavy` says:
+    ```
+    Events:  0/1 nodes are available: 1 Insufficient cpu.
+    ```
+  question: "Why did the scheduler fail, and how do you fix it?"
+  diagnosis: |
+    The scheduler filters out any node that cannot fit the Pod's
+    **requests**. The node has less than 8 CPU cores free, so it
+    is thrown away. Nothing is left. The Pod waits in `Pending`.
+
+    Fixes:
+    - Lower `cpu` and `memory` requests to fit the node
+      (`kubectl describe node NODE` shows what is free).
+    - Or add a bigger node to the cluster.
+
+    Rule: think of requests as *"how much room the Pod reserves"*,
+    not *"how much it will really use"*.
+  concept: scheduling-basics
+review_questions:
+  - prompt: "The scheduler does two steps in order. Which is correct?"
+    kind: multiple_choice
+    options:
+      - "Score, then filter"
+      - "Filter, then score"
+      - "Only score"
+      - "Only filter"
+    answer: "Filter first (drop nodes that cannot run the Pod), then score the rest and pick the best."
+    concept: scheduling-basics
+  - prompt: "You want your Pod to run only on nodes labelled `disk=ssd`. What is the simplest way?"
+    kind: scenario
+    answer: "Add `spec.nodeSelector: { disk: ssd }` on the Pod (or its template). For richer rules, use `nodeAffinity`."
+    concept: scheduling-basics
+  - prompt: "True or false: without `resources.requests`, the scheduler picks the node with the most free CPU."
+    kind: recall
+    answer: "False. Without requests the scheduler cannot reserve room; it may pack Pods onto a small node and cause CPU or memory pressure."
+    concept: scheduling-basics
+  - prompt: "Your Pod is stuck `Pending`. What is the first command to run?"
+    kind: debug
+    answer: "`kubectl describe pod NAME`. The Events section at the bottom explains why (insufficient CPU, taint, no matching node, ...)."
+    concept: scheduling-basics
+common_mistakes:
+  - mistake: "Thinking the node with the most CPU always wins."
+    fix: "Only nodes that PASS the filter can win. Requests, taints, and node selectors filter first."
+  - mistake: "Forgetting `resources.requests` and being surprised by out-of-memory kills."
+    fix: "Always set requests. The scheduler needs them to reserve room."
+summary: |
+  The scheduler filters nodes that cannot run a Pod, then scores
+  the rest. You guide it with nodeSelector, node affinity, pod
+  (anti-)affinity, and taints and tolerations. Requests set how
+  much room the Pod reserves. You will meet each tool in the
+  next lessons.
+spaced_hooks:
+  - concept: scheduling-basics
+    when: next
+  - concept: scheduling-basics
+    when: "2-3"
+  - concept: scheduling-basics
+    when: capstone
 cheat: |
   ### Scheduler basics
   - Two steps: **filter** nodes, then **score** them.

@@ -3,6 +3,12 @@ title: "Evictions"
 module: scheduling
 order: 5
 estimated_minutes: 6
+learning_goal: "List the reasons Kubernetes evicts a Pod and protect an app with a PodDisruptionBudget."
+prerequisites:
+  - scheduling-basics
+  - taints-tolerations
+  - priorities
+  - requests-limits
 intro: |
   # Eviction: when Kubernetes removes a Pod
 
@@ -27,8 +33,91 @@ intro: |
   will not do voluntary evictions that break this rule.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "What is preemption?"
+    answer: "The scheduler evicts lower-priority Pods to make room for a higher-priority Pod that cannot fit anywhere."
+    kind: recall
+    concept: priorities
+  - prompt: "Which taint effect evicts already-running Pods?"
+    answer: "`NoExecute`. Running Pods without a matching toleration are removed from the node."
+    kind: recall
+    concept: taints-tolerations
+  - prompt: "Why should every container have `resources.requests` set?"
+    answer: "So the scheduler can reserve room, and so the node knows this Pod's fair share when memory or CPU runs low."
+    kind: recall
+    concept: requests-limits
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    An admin runs `kubectl drain node-3 --ignore-daemonsets` to
+    prepare for a reboot. A few seconds later, users complain
+    that the `web` app is down. `kubectl get pods -l app=web`
+    shows 0 Pods Running.
+
+    The Deployment has 3 replicas. Node-3 was running all 3.
+  question: "What went wrong, and how could it be prevented next time?"
+  diagnosis: |
+    All 3 Pods lived on the same node, so drain removed all of
+    them at once. There was no time for new Pods to start on
+    other nodes.
+
+    Prevention:
+    - Add a **PodDisruptionBudget**:
+      ```yaml
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      metadata: { name: web }
+      spec:
+        minAvailable: 2
+        selector: { matchLabels: { app: web } }
+      ```
+      `drain` will refuse to evict Pods that would break this.
+    - Also spread Pods across nodes with
+      `topologySpreadConstraints` so they are not all on one
+      node in the first place.
+  concept: evictions
+review_questions:
+  - prompt: "Which of these is NOT a reason Kubernetes evicts a Pod?"
+    kind: multiple_choice
+    options:
+      - "Node pressure (low memory or disk)"
+      - "API eviction (kubectl drain)"
+      - "Preemption by a higher-priority Pod"
+      - "The user did not view logs recently"
+    answer: "The last one. Not viewing logs is not a reason. The other three are real eviction causes."
+    concept: evictions
+  - prompt: "What does `minAvailable: 2` in a PodDisruptionBudget mean?"
+    kind: recall
+    answer: "At least 2 Pods matching the selector must stay ready during voluntary evictions (like `kubectl drain`)."
+    concept: evictions
+  - prompt: "The node runs out of memory and the kubelet must evict something. Which Pods are removed first?"
+    kind: scenario
+    answer: "Pods with no `requests`, or Pods using far more than they requested (BestEffort and Burstable go before Guaranteed)."
+    concept: evictions
+  - prompt: "You want an admin to be able to reboot a node, but you also want your app to stay up. What do you add?"
+    kind: debug
+    answer: "A PodDisruptionBudget on the app plus topology spread (or multiple replicas across nodes), so drain can evict Pods safely one at a time."
+    concept: evictions
+common_mistakes:
+  - mistake: "Not setting a PodDisruptionBudget, then losing all replicas during a drain."
+    fix: "Always add a PDB on production Deployments and StatefulSets."
+  - mistake: "Setting `minAvailable` equal to the replica count."
+    fix: "That blocks all voluntary evictions and stops upgrades. Leave room, e.g. `minAvailable: replicas - 1`."
+  - mistake: "Forgetting node-pressure evictions when Pods have no requests."
+    fix: "Set `resources.requests` on every container so the kubelet knows the Pod's fair share."
+summary: |
+  A Pod can be evicted for node pressure, API drain, preemption,
+  or a `NoExecute` taint. A PodDisruptionBudget protects an app
+  during voluntary evictions. Combine PDBs, requests, and
+  topology spread to keep services up during node maintenance.
+spaced_hooks:
+  - concept: evictions
+    when: next
+  - concept: evictions
+    when: "2-3"
+  - concept: evictions
+    when: capstone
 cheat: |
   ### Evictions
   Reasons Kubernetes evicts a Pod:

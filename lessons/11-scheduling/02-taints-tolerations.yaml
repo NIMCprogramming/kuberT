@@ -3,6 +3,11 @@ title: "Taints and tolerations"
 module: scheduling
 order: 2
 estimated_minutes: 10
+learning_goal: "Add and remove a node taint and write a matching toleration on a Pod."
+prerequisites:
+  - scheduling-basics
+  - pods
+  - kubectl
 intro: |
   # Taints and tolerations
 
@@ -24,6 +29,19 @@ intro: |
   - Reserve GPU nodes for ML Pods only.
   - Keep the control-plane node free of user Pods (this is the
     default!).
+warm_up:
+  - prompt: "What two steps does the scheduler do to place a Pod?"
+    answer: "First **filter** (drop nodes that cannot run the Pod), then **score** the rest and pick the best."
+    kind: recall
+    concept: scheduling-basics
+  - prompt: "What is a Pod, in one sentence?"
+    answer: "The smallest unit in Kubernetes; one (or more) containers that share IP and volumes."
+    kind: recall
+    concept: pods
+  - prompt: "How do you list all nodes in the cluster with their labels?"
+    answer: "`kubectl get nodes --show-labels`."
+    kind: recall
+    concept: kubectl
 task: |
   Add a taint to a node, then remove it.
 
@@ -50,6 +68,76 @@ task: |
   When done, press `c`.
 hint: "The trailing '-' at the end of the command removes the taint. Don't forget it!"
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You add a taint to every worker node to reserve them for one
+    team:
+    ```
+    kubectl taint node worker-1 team=ml:NoSchedule
+    kubectl taint node worker-2 team=ml:NoSchedule
+    ```
+    Soon after, DNS in the cluster starts to break. `kubectl get
+    pods -n kube-system` shows CoreDNS in `Pending`:
+    ```
+    coredns-abc   0/1   Pending   0   5m
+    ```
+  question: "Why did system Pods fail to schedule, and how do you fix it?"
+  diagnosis: |
+    Your taint blocks **every** Pod without the toleration —
+    including system components like CoreDNS. They have no
+    `team=ml` toleration, so no node is left for them.
+
+    Fixes:
+    - Remove the taint from at least one node, or
+    - Add a matching toleration to the system DaemonSet /
+      Deployment (many system Pods already tolerate a specific
+      key, not `team=ml`), or
+    - Use `PreferNoSchedule` instead of `NoSchedule` if you only
+      want a soft push.
+
+    Rule: check what system Pods run on the node before you taint
+    it.
+  concept: taints-tolerations
+review_questions:
+  - prompt: "Which effect kicks OUT already-running Pods without a matching toleration?"
+    kind: multiple_choice
+    options:
+      - "NoSchedule"
+      - "PreferNoSchedule"
+      - "NoExecute"
+      - "NoTraffic"
+    answer: "`NoExecute`. `NoSchedule` only blocks NEW Pods; `NoExecute` also evicts running ones."
+    concept: taints-tolerations
+  - prompt: "Write the shell command that removes the taint `gpu=yes:NoSchedule` from a node named `n1`."
+    kind: scenario
+    answer: "`kubectl taint node n1 gpu=yes:NoSchedule-` (the trailing `-` removes it)."
+    concept: taints-tolerations
+  - prompt: "Which node has a `NoSchedule` taint by default, and why?"
+    kind: recall
+    answer: "The **control-plane** node. It keeps user Pods off the API server / etcd machine so they cannot starve the control plane."
+    concept: taints-tolerations
+  - prompt: "You add a toleration on a Pod. Does the scheduler now PREFER the tainted node?"
+    kind: debug
+    answer: "No. A toleration only lets the Pod **be allowed** on the node. To also prefer it, add a `nodeAffinity` or `nodeSelector`."
+    concept: taints-tolerations
+common_mistakes:
+  - mistake: "Tainting every node without a plan — system Pods stop scheduling."
+    fix: "Leave at least one untainted node, or tolerate system Pods explicitly. Test on one node first."
+  - mistake: "Thinking a toleration will place the Pod on the tainted node."
+    fix: "Tolerations only ALLOW. Combine with nodeAffinity / nodeSelector to actually attract the Pod."
+summary: |
+  Taints repel; tolerations allow. Three effects: `NoSchedule`
+  (new Pods), `PreferNoSchedule` (soft), `NoExecute` (evict
+  running). Use them to reserve special nodes (GPU, storage) or
+  drain a node before maintenance. Combine with node affinity to
+  also attract Pods.
+spaced_hooks:
+  - concept: taints-tolerations
+    when: next
+  - concept: taints-tolerations
+    when: "2-3"
+  - concept: taints-tolerations
+    when: capstone
 cheat: |
   ### Taints and tolerations
   **Effects:** `NoSchedule`, `PreferNoSchedule`, `NoExecute`.

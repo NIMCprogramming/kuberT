@@ -3,6 +3,12 @@ title: "Pod priority"
 module: scheduling
 order: 4
 estimated_minutes: 6
+learning_goal: "Create a PriorityClass, attach it to a Pod, and explain when preemption happens."
+prerequisites:
+  - scheduling-basics
+  - taints-tolerations
+  - topology-spread
+  - requests-limits
 intro: |
   # Pod priority and preemption
 
@@ -27,8 +33,84 @@ intro: |
   Use them wisely. If everything is `high-prio`, nothing is.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "What does the scheduler do first: filter or score?"
+    answer: "Filter first. It drops nodes that cannot run the Pod, then scores the rest."
+    kind: recall
+    concept: scheduling-basics
+  - prompt: "What is a `NoSchedule` taint?"
+    answer: "A mark on a node that blocks new Pods from scheduling there unless they have a matching toleration."
+    kind: recall
+    concept: taints-tolerations
+  - prompt: "What does `resources.requests.memory` set?"
+    answer: "The amount of memory the container reserves. The scheduler uses it to check the node still has room."
+    kind: recall
+    concept: requests-limits
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A team set `priorityClassName: high-prio` (value 1_000_000)
+    on EVERY app in the cluster. During a busy afternoon they
+    also deploy a new batch job with the same class. Suddenly
+    some payment Pods disappear and users get errors.
+  question: "What went wrong with priority, and how do you fix it?"
+  diagnosis: |
+    When every Pod is high priority, priority stops meaning
+    anything. The batch job needed room, so the scheduler
+    preempted some other high-priority Pods — including payment
+    Pods.
+
+    Fixes:
+    - Use a range of classes: `low-prio` for batch jobs, `mid`
+      for background services, `high-prio` only for critical.
+    - Give payment Pods a **higher** class than batch jobs (e.g.
+      `payment-critical: 2000000`).
+    - Add a **PodDisruptionBudget** to payment so voluntary
+      evictions cannot break the app.
+
+    Rule: if everything is high, nothing is high.
+  concept: priorities
+review_questions:
+  - prompt: "What happens when a Pod with `priorityClassName: high-prio` cannot fit on any node?"
+    kind: multiple_choice
+    options:
+      - "It stays Pending forever"
+      - "Kubernetes may evict lower-priority Pods to make room (preemption)"
+      - "Kubernetes buys a new node"
+      - "Nothing"
+    answer: "Preemption. The scheduler may evict lower-priority Pods to fit the high-priority one."
+    concept: priorities
+  - prompt: "Which two PriorityClasses come built in with every cluster?"
+    kind: recall
+    answer: "`system-cluster-critical` and `system-node-critical`. Both have very high values and are used by system Pods."
+    concept: priorities
+  - prompt: "You have batch jobs that can be killed anytime and payment services that must not. How do you set priority?"
+    kind: scenario
+    answer: "Make a `low-prio` class for batch (small number) and a `high-prio` class for payment (bigger number). Also add a PodDisruptionBudget on payment."
+    concept: priorities
+  - prompt: "True or false: setting `globalDefault: true` on a PriorityClass makes it the default for every new Pod without a class."
+    kind: recall
+    answer: "True. But only ONE PriorityClass can be the global default at a time."
+    concept: priorities
+common_mistakes:
+  - mistake: "Marking everything as high priority."
+    fix: "Priority is a ranking. Use a range so preemption does the right thing."
+  - mistake: "Assuming preemption respects PodDisruptionBudgets."
+    fix: "It does not always. Add a PDB, but also give critical Pods a higher class than the ones that could preempt them."
+summary: |
+  A PriorityClass tags Pods with a number so the scheduler knows
+  who wins the last node. If a high-priority Pod cannot fit,
+  Kubernetes may preempt lower-priority Pods. Use a range and
+  keep truly critical services above batch jobs. Priority also
+  affects autoscaling and evictions.
+spaced_hooks:
+  - concept: priorities
+    when: next
+  - concept: priorities
+    when: "2-3"
+  - concept: priorities
+    when: capstone
 cheat: |
   ### Pod priority and preemption
   ```yaml

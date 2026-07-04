@@ -3,6 +3,11 @@ title: "Topology spread constraints"
 module: scheduling
 order: 3
 estimated_minutes: 6
+learning_goal: "Read a topologySpreadConstraint and explain why it makes an app survive a zone failure."
+prerequisites:
+  - scheduling-basics
+  - taints-tolerations
+  - labels
 intro: |
   # Spread Pods across zones
 
@@ -24,8 +29,92 @@ intro: |
   it is very important on real cloud clusters.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "What are the two steps of the scheduler?"
+    answer: "**Filter** nodes that cannot run the Pod, then **score** the rest and pick the best."
+    kind: recall
+    concept: scheduling-basics
+  - prompt: "What does a `NoSchedule` taint do?"
+    answer: "It blocks NEW Pods from being scheduled on the node unless they have a matching toleration."
+    kind: recall
+    concept: taints-tolerations
+  - prompt: "How does a Service pick which Pods to send traffic to?"
+    answer: "By its `selector`, which matches Pod **labels** (like `app=web`)."
+    kind: recall
+    concept: labels
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    You added this spread rule to a Deployment with 5 replicas
+    running on a 2-zone cluster:
+    ```yaml
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels: { app: web }
+    ```
+    After a rollout, `kubectl get pods` shows 4 Pods Running and
+    1 Pod `Pending`.
+  question: "Why is one Pod Pending, and how do you fix it?"
+  diagnosis: |
+    With 5 Pods and 2 zones, one zone must hold 3 and the other
+    2. That is a skew of 1, which is OK. But if both zones are
+    full (all nodes at capacity in the zone that would take the
+    5th Pod), the scheduler cannot fit it. With
+    `whenUnsatisfiable: DoNotSchedule`, the Pod stays `Pending`
+    rather than break the spread.
+
+    Fixes:
+    - Add more capacity in the zone that is full.
+    - Use `whenUnsatisfiable: ScheduleAnyway` so the scheduler
+      places the Pod even if the spread breaks.
+    - Increase `maxSkew` (loosen the rule).
+
+    Rule: `DoNotSchedule` is strict. It trades placement for
+    safety and can leave Pods Pending.
+  concept: topology-spread
+review_questions:
+  - prompt: "What does `maxSkew: 1` mean?"
+    kind: multiple_choice
+    options:
+      - "Only 1 Pod is allowed per zone"
+      - "The difference between the busiest and least busy topology bucket must not be more than 1"
+      - "The Pod must run in 1 zone"
+      - "Skip the rule after 1 failure"
+    answer: "The **difference** in Pod count between any two topology buckets (zones/nodes) must not exceed 1."
+    concept: topology-spread
+  - prompt: "Which topology key spreads across nodes on the same zone?"
+    kind: recall
+    answer: "`kubernetes.io/hostname`. Every node has a unique value, so Pods spread one per node."
+    concept: topology-spread
+  - prompt: "You want your Pods spread across zones but you never want a Pod to be Pending if the spread cannot be honoured. Which setting?"
+    kind: scenario
+    answer: "`whenUnsatisfiable: ScheduleAnyway`. The scheduler places the Pod even if the spread rule is broken."
+    concept: topology-spread
+  - prompt: "True or false: topology spread constraints work on a single-node cluster."
+    kind: recall
+    answer: "Kind of. They apply, but with only one node/zone there is nothing to spread across. You need multiple zones or nodes for the rule to have effect."
+    concept: topology-spread
+common_mistakes:
+  - mistake: "Using `whenUnsatisfiable: DoNotSchedule` in a small cluster."
+    fix: "You risk `Pending` Pods when the spread cannot be met. Use `ScheduleAnyway` when placement matters more than spread."
+  - mistake: "Forgetting to also set node anti-affinity, then all Pods land on the same node."
+    fix: "Add a second constraint with `topologyKey: kubernetes.io/hostname` to spread across nodes too."
+summary: |
+  A topologySpreadConstraint tells the scheduler to balance Pods
+  across a topology (zone, node, ...). `maxSkew` sets how uneven
+  is OK. `whenUnsatisfiable` picks strict vs soft. Great for
+  surviving a zone failure on a real cloud cluster.
+spaced_hooks:
+  - concept: topology-spread
+    when: next
+  - concept: topology-spread
+    when: "5-7"
+  - concept: topology-spread
+    when: capstone
 cheat: |
   ### Topology spread constraints
   Spread Pods across zones/nodes to survive failures.
