@@ -3,6 +3,12 @@ title: "Running stateful apps"
 module: storage
 order: 3
 estimated_minutes: 20
+learning_goal: "Deploy a StatefulSet with per-Pod PVCs and prove data survives Pod restarts."
+prerequisites:
+  - statefulsets
+  - volumes-pv-pvc
+  - csi-drivers
+  - services
 intro: |
   # Stateful apps
 
@@ -57,6 +63,19 @@ intro: |
             requests: { storage: 100Mi }
   ```
 
+warm_up:
+  - prompt: "What is a StatefulSet, and how is it different from a Deployment?"
+    answer: "A StatefulSet keeps stable Pod names (like `web-0`, `web-1`), starts Pods in order, and can attach a unique PVC to each Pod. A Deployment gives interchangeable Pods and no per-Pod storage."
+    kind: recall
+    concept: statefulsets
+  - prompt: "What does a PVC do?"
+    answer: "It asks Kubernetes for real storage of a given size and access mode. Data on it survives Pod deletion."
+    kind: recall
+    concept: volumes-pv-pvc
+  - prompt: "Why do we need a Service for a StatefulSet?"
+    answer: "A **headless Service** (`clusterIP: None`) gives each Pod a stable DNS name like `web-0.web.default.svc.cluster.local`, so Pods can find each other."
+    kind: recall
+    concept: services
 task: |
   **Your goal:** build a StatefulSet with per-Pod PVCs and prove
   data survives a Pod restart.
@@ -89,6 +108,81 @@ hint: |
   - Wait for the new Pod: `kubectl wait --for=condition=Ready pod/store-0 --timeout=120s`.
   - See the PVC attached to a Pod: `kubectl get pod store-0 -o jsonpath='{.spec.volumes[0].persistentVolumeClaim.claimName}'`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You deleted a StatefulSet:
+    ```
+    kubectl delete statefulset store
+    ```
+    Now you list PVCs:
+    ```
+    kubectl get pvc
+    NAME            STATUS   VOLUME             CAPACITY
+    data-store-0    Bound    pvc-...            100Mi
+    data-store-1    Bound    pvc-...            100Mi
+    ```
+    Days later a teammate wonders why storage cost is high.
+  question: "Why are the PVCs still there, and what should you do?"
+  diagnosis: |
+    Deleting a StatefulSet does **NOT** delete its PVCs. This is
+    on purpose — you might want to bring the app back and keep
+    the data.
+
+    To remove PVCs, do it explicitly:
+    ```
+    kubectl delete pvc -l app=store
+    ```
+
+    Or set the newer field on the StatefulSet:
+    ```yaml
+    spec:
+      persistentVolumeClaimRetentionPolicy:
+        whenDeleted: Delete
+        whenScaled: Retain
+    ```
+    which lets Kubernetes clean up PVCs for you.
+  concept: stateful-apps
+review_questions:
+  - prompt: "A StatefulSet named `store` uses `volumeClaimTemplates` named `data`. What is the PVC name for the second Pod?"
+    kind: multiple_choice
+    options:
+      - "data-store-2"
+      - "data-store-1"
+      - "store-data-1"
+      - "store-1-data"
+    answer: "`data-store-1`. The pattern is `<template>-<statefulset>-<index>`, and indexes start at 0."
+    concept: stateful-apps
+  - prompt: "Why does a StatefulSet start Pods in order (0 first, then 1, then 2)?"
+    kind: recall
+    answer: "Many stateful apps (databases, clusters) need to elect a leader or bootstrap in a fixed order. Ordered start-up makes this safe."
+    concept: stateful-apps
+  - prompt: "You want to run a real Postgres cluster on Kubernetes. Should you write your own StatefulSet from scratch?"
+    kind: scenario
+    answer: "Usually no. Use an **Operator** (like CloudNativePG or Zalando Postgres Operator). It handles backups, failover, and upgrades — hard problems you do not want to solve alone."
+    concept: stateful-apps
+  - prompt: "You scaled a StatefulSet from 3 to 1. What happens to the PVCs of the two removed Pods (with default settings)?"
+    kind: debug
+    answer: "They stay. Data is kept in case you scale back up. To auto-delete, set `persistentVolumeClaimRetentionPolicy.whenScaled: Delete`."
+    concept: stateful-apps
+common_mistakes:
+  - mistake: "Deleting the StatefulSet and forgetting the PVCs."
+    fix: "Run `kubectl delete pvc -l app=NAME` after, or set `persistentVolumeClaimRetentionPolicy` on the StatefulSet."
+  - mistake: "Using a Deployment for a database."
+    fix: "Use a StatefulSet with `volumeClaimTemplates`. Deployments give interchangeable Pods and no per-Pod storage."
+  - mistake: "Draining a node that runs a StatefulSet Pod without a PodDisruptionBudget."
+    fix: "Add a PDB so at least N replicas stay up during voluntary evictions."
+summary: |
+  A StatefulSet plus `volumeClaimTemplates` gives every Pod a
+  stable name and its own disk. Data survives Pod deletion, but
+  the PVCs are kept by default when the StatefulSet is deleted —
+  clean them up on purpose. For real databases, use an Operator.
+spaced_hooks:
+  - concept: stateful-apps
+    when: next
+  - concept: stateful-apps
+    when: "2-3"
+  - concept: stateful-apps
+    when: capstone
 cheat: |
   ### Stateful apps
   - Use a **StatefulSet** + **volumeClaimTemplates** for per-Pod disks.

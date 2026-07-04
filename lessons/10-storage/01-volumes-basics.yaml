@@ -3,6 +3,11 @@ title: "Volumes basics"
 module: storage
 order: 1
 estimated_minutes: 18
+learning_goal: "Create a PVC, bind it to a Pod, and prove data survives a Pod deletion."
+prerequisites:
+  - pods
+  - yaml-apply
+  - containers
 intro: |
   # Why volumes?
 
@@ -66,6 +71,19 @@ intro: |
           claimName: PVC_NAME
   ```
 
+warm_up:
+  - prompt: "What is a Pod, in one sentence?"
+    answer: "The smallest unit in Kubernetes; one (or more) containers that share IP and volumes."
+    kind: recall
+    concept: pods
+  - prompt: "What does `kubectl apply -f my.yaml` do?"
+    answer: "It sends the YAML to Kubernetes. New resources are created; existing ones are updated to match the file."
+    kind: recall
+    concept: yaml-apply
+  - prompt: "If a container writes to its own filesystem and then dies, what happens to those files?"
+    answer: "They are lost. The writable layer of a container is thrown away when the container stops."
+    kind: recall
+    concept: containers
 task: |
   **Your goal:** prove that a PVC keeps data across Pod restarts.
 
@@ -98,6 +116,78 @@ hint: |
   - Check bind status: `kubectl get pvc work` → STATUS Bound.
   - See the auto-created PV: `kubectl get pvc work -o jsonpath='{.spec.volumeName}'`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You created this PVC:
+    ```yaml
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata: { name: work }
+    spec:
+      accessModes: [ReadWriteMany]
+      resources: { requests: { storage: 1Gi } }
+    ```
+    On `kind`, `kubectl get pvc work` shows STATUS `Pending` forever.
+    `kubectl describe pvc work` says:
+    ```
+    no persistent volumes available for this claim and no storage class is set
+    ```
+  question: "Why does the PVC never bind, and how do you fix it?"
+  diagnosis: |
+    The default StorageClass on `kind` is `local-path`. It only
+    supports **`ReadWriteOnce`**, not `ReadWriteMany`. No PV can
+    satisfy your claim, so the PVC stays Pending.
+
+    Two fixes:
+    1. Change the PVC to `accessModes: [ReadWriteOnce]`.
+    2. Install a driver that supports RWX (like an NFS provisioner)
+       and set its StorageClass on the PVC.
+
+    Always match the PVC's `accessModes` to what the StorageClass
+    actually supports.
+  concept: volumes-pv-pvc
+review_questions:
+  - prompt: "Which access mode lets ONE node mount the volume as read+write?"
+    kind: multiple_choice
+    options:
+      - "ReadOnlyMany"
+      - "ReadWriteMany"
+      - "ReadWriteOnce"
+      - "ReadOnlyOnce"
+    answer: "`ReadWriteOnce` (RWO). It is the most common mode."
+    concept: volumes-pv-pvc
+  - prompt: "You deleted a Pod that used PVC `work`. What happens to the data on the PVC?"
+    kind: recall
+    answer: "The PVC (and the PV behind it) stays. The next Pod that mounts the same PVC sees the old data."
+    concept: volumes-pv-pvc
+  - prompt: "You want a shared config folder that dies with the Pod. Which Volume type?"
+    kind: scenario
+    answer: "`emptyDir`. It is created when the Pod starts and deleted when the Pod dies."
+    concept: volumes-pv-pvc
+  - prompt: "Your PVC is stuck in `Pending`. What is the first thing to check?"
+    kind: debug
+    answer: "`kubectl describe pvc NAME` — the events at the bottom say why. Common reasons: no matching StorageClass, wrong `accessModes`, or `WaitForFirstConsumer` with no Pod using the PVC yet."
+    concept: volumes-pv-pvc
+common_mistakes:
+  - mistake: "Asking for `ReadWriteMany` on a driver that only supports `ReadWriteOnce`."
+    fix: "Check what your StorageClass supports first. On `kind`, use RWO."
+  - mistake: "Deleting the PVC when you only meant to delete the Pod."
+    fix: "Delete the Pod, not the PVC. The PVC (and data) stays."
+  - mistake: "Expecting `emptyDir` to keep data across Pod restarts."
+    fix: "`emptyDir` dies with the Pod. Use a PVC for data that must survive."
+summary: |
+  A Volume is storage that lives outside a container's writable
+  layer. A PVC is your request for real storage; Kubernetes finds
+  or creates a PV to satisfy it. Data on a PVC survives Pod
+  deletion. You will use PVCs again with StatefulSets and CSI
+  drivers.
+spaced_hooks:
+  - concept: volumes-pv-pvc
+    when: next
+  - concept: volumes-pv-pvc
+    when: "2-3"
+  - concept: volumes-pv-pvc
+    when: capstone
 cheat: |
   ### Volumes and PVCs
   - **Volume** = folder outside the container's writable layer.

@@ -3,6 +3,11 @@ title: "CSI drivers and StorageClasses"
 module: storage
 order: 2
 estimated_minutes: 12
+learning_goal: "Read a StorageClass and pick the right one for a PVC."
+prerequisites:
+  - volumes-pv-pvc
+  - yaml-apply
+  - kubectl
 intro: |
   # How does the real disk get created?
 
@@ -62,6 +67,19 @@ intro: |
   Or `storageClassName: ""` to say *"no dynamic provisioning; only
   match an existing PV"*.
 
+warm_up:
+  - prompt: "What is a PVC, in one sentence?"
+    answer: "A user's request for storage of a given size and access mode; Kubernetes finds or creates a PV to satisfy it."
+    kind: recall
+    concept: volumes-pv-pvc
+  - prompt: "Which three access modes can a PVC ask for?"
+    answer: "`ReadWriteOnce` (RWO), `ReadOnlyMany` (ROX), `ReadWriteMany` (RWX)."
+    kind: recall
+    concept: volumes-pv-pvc
+  - prompt: "How do you list all resources of a kind (like PVCs) in the current namespace?"
+    answer: "`kubectl get pvc` (short) or `kubectl get persistentvolumeclaims`."
+    kind: recall
+    concept: kubectl
 task: |
   ### Step 1 — list the StorageClasses
 
@@ -87,6 +105,71 @@ task: |
   When you can see one default class, press `c`.
 hint: "kubectl describe storageclass standard  -- same info, nicer to read"
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    A user creates this PVC on a cluster with two StorageClasses,
+    `fast-ssd` (RWO) and `nfs-shared` (RWX):
+    ```yaml
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata: { name: shared }
+    spec:
+      accessModes: [ReadWriteMany]
+      resources: { requests: { storage: 1Gi } }
+      storageClassName: fast-ssd
+    ```
+    The PVC stays in `Pending` forever.
+  question: "What mistake did the user make?"
+  diagnosis: |
+    They picked the wrong StorageClass for the access mode.
+    `fast-ssd` only supports `ReadWriteOnce`, but the PVC asks for
+    `ReadWriteMany`. No PV can satisfy this.
+
+    Fix: either
+    - Change `storageClassName: nfs-shared` (which supports RWX).
+    - Or change the access mode to `ReadWriteOnce` if only one Pod
+      will write.
+
+    Rule: always match the access mode to what the StorageClass
+    can offer.
+  concept: csi-drivers
+review_questions:
+  - prompt: "What does CSI stand for and why does it exist?"
+    kind: multiple_choice
+    options:
+      - "Container Storage Interface — a shared API so any storage system can plug into Kubernetes the same way"
+      - "Cluster Storage Instance — the actual disk"
+      - "Common Storage Index — a list of PVCs"
+      - "Compact Storage Image — a small disk image"
+    answer: "Container Storage Interface. It is the shared plugin API used by cloud disks, NFS, Ceph, local disks, and more."
+    concept: csi-drivers
+  - prompt: "What is `volumeBindingMode: WaitForFirstConsumer` used for?"
+    kind: recall
+    answer: "The PV is only created when a Pod tries to use the PVC. That way the disk lands on the same node as the Pod. Common for local-disk drivers."
+    concept: csi-drivers
+  - prompt: "Your cluster has three StorageClasses. A PVC does not name one. Which one is used?"
+    kind: scenario
+    answer: "The one marked as **default** by the annotation `storageclass.kubernetes.io/is-default-class: \"true\"`. If none is default, the PVC stays Pending."
+    concept: csi-drivers
+  - prompt: "What is the difference between `reclaimPolicy: Delete` and `Retain`?"
+    kind: recall
+    answer: "`Delete`: when the PVC is deleted, the PV and the real disk are also deleted. `Retain`: the PV stays (with data) so an admin can recover it."
+    concept: csi-drivers
+common_mistakes:
+  - mistake: "Picking a StorageClass whose access mode does not match the PVC (RWO class, RWX claim)."
+    fix: "Read what the StorageClass supports before you set the PVC's access mode."
+  - mistake: "Using `reclaimPolicy: Delete` for production data."
+    fix: "For important data, use `Retain` so a mistake does not destroy the disk. Set backups too."
+summary: |
+  A CSI driver creates the real disk. A StorageClass names the
+  driver plus parameters and picks a reclaim policy and binding
+  mode. Match the StorageClass to the access mode your PVC needs.
+  You will use StorageClasses again with StatefulSets.
+spaced_hooks:
+  - concept: csi-drivers
+    when: next
+  - concept: csi-drivers
+    when: capstone
 cheat: |
   ### StorageClasses & CSI
   - **CSI** = Container Storage Interface. Standard plugin API.
