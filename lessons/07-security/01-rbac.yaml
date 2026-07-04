@@ -3,6 +3,12 @@ title: "RBAC — who can do what"
 module: security
 order: 1
 estimated_minutes: 20
+learning_goal: "Create a ServiceAccount, a Role with a narrow verb list, and a RoleBinding, then prove the granted rights with `kubectl auth can-i`."
+prerequisites:
+  - configmap
+  - secret
+  - kubectl
+  - services-clusterip
 intro: |
   # RBAC
 
@@ -55,6 +61,19 @@ intro: |
   kubectl auth can-i VERB RESOURCE --as=system:serviceaccount:NS:SA_NAME
   ```
   Prints `yes` or `no`.
+warm_up:
+  - prompt: "What does a Secret store, and why is it different from a ConfigMap?"
+    answer: "A Secret stores private values (passwords, tokens, TLS keys). Same shape as ConfigMap, but flagged as sensitive and (should be) protected by RBAC and encryption at rest."
+    kind: recall
+    concept: secret
+  - prompt: "How do you list all Services in the namespace `web`?"
+    answer: "`kubectl get services -n web` (or `kubectl get svc -n web`)."
+    kind: recall
+    concept: kubectl-basics
+  - prompt: "You applied a ConfigMap. Which command shows all its keys and values?"
+    answer: "`kubectl describe cm NAME` or `kubectl get cm NAME -o yaml`."
+    kind: recall
+    concept: configmap
 task: |
   **Your goal:** build a limited identity and prove what it can
   and cannot do.
@@ -82,6 +101,80 @@ hint: |
   - Check "as": `kubectl auth can-i list services --as=system:serviceaccount:default:viewer`
   - See ALL allowed actions: `kubectl auth can-i --list --as=system:serviceaccount:default:viewer`
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    A teammate wrote this ClusterRole for a read-only dashboard
+    ServiceAccount:
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata: { name: dashboard-ro }
+    rules:
+      - apiGroups: ["*"]
+        resources: ["*"]
+        verbs: ["*"]
+    ```
+    They bound it cluster-wide to the SA. In a review, you flag
+    this immediately.
+  question: "What is wrong, and how would you narrow it down?"
+  diagnosis: |
+    `verbs: ["*"]` on `resources: ["*"]` cluster-wide is **full
+    admin**. That is the opposite of read-only and it defeats the
+    point of RBAC.
+
+    Fix (list only what the dashboard needs):
+    ```yaml
+    rules:
+      - apiGroups: [""]
+        resources: ["pods", "services", "configmaps"]
+        verbs: ["get", "list", "watch"]
+    ```
+    Then also use a **RoleBinding** (namespace-scoped) unless the
+    dashboard truly needs to see every namespace.
+  concept: rbac
+review_questions:
+  - prompt: "Which two objects must both exist for a ServiceAccount to actually gain rights?"
+    kind: multiple_choice
+    options:
+      - "A Role and a Pod"
+      - "A Role (or ClusterRole) AND a RoleBinding (or ClusterRoleBinding)"
+      - "Just a ClusterRole"
+      - "A Deployment and a Secret"
+    answer: "A Role (or ClusterRole) AND a RoleBinding (or ClusterRoleBinding). One alone does nothing."
+    concept: rbac
+  - prompt: "How do you check whether SA `viewer` in `default` can `list secrets`?"
+    kind: recall
+    answer: "`kubectl auth can-i list secrets --as=system:serviceaccount:default:viewer`."
+    concept: rbac
+  - prompt: "A Pod is denied when reading a ConfigMap. What is the fix path?"
+    kind: scenario
+    answer: "Grant the Pod's ServiceAccount a Role with `verbs: [get, list]` on `configmaps`, then bind it with a RoleBinding in the Pod's namespace."
+    concept: rbac
+  - prompt: "You want a subject to read pods in every namespace. Which kind of Role and Binding?"
+    kind: recall
+    answer: "A **ClusterRole** with `verbs: [get, list, watch]` on `pods`, and a **ClusterRoleBinding** to that subject."
+    concept: rbac
+common_mistakes:
+  - mistake: "Using `verbs: [\"*\"]` and `resources: [\"*\"]` 'just to make it work'."
+    fix: "That is cluster admin. List the specific verbs and resources you actually need."
+  - mistake: "Creating a Role but forgetting the RoleBinding. Access is still denied and it feels like a bug."
+    fix: "Always pair Role with RoleBinding. Check with `kubectl auth can-i`."
+  - mistake: "Binding a namespaced Role to a subject in another namespace and expecting it to work."
+    fix: "A RoleBinding is namespaced. Either put subject and binding in the same namespace, or use ClusterRoleBinding."
+summary: |
+  RBAC = Role/ClusterRole (the rules) + RoleBinding/
+  ClusterRoleBinding (who gets them). Subjects are Users, Groups,
+  or ServiceAccounts (Pods). `kubectl auth can-i` is your daily
+  proof that the rules do what you meant.
+spaced_hooks:
+  - concept: rbac
+    when: next
+  - concept: rbac
+    when: "2-3"
+  - concept: rbac
+    when: "5-7"
+  - concept: rbac
+    when: capstone
 cheat: |
   ### RBAC
   Four kinds:

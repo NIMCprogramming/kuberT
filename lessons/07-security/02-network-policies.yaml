@@ -3,6 +3,11 @@ title: "Network policies"
 module: security
 order: 2
 estimated_minutes: 8
+learning_goal: "Read a NetworkPolicy YAML and explain which Pods it selects, what it allows, and why it needs a matching CNI plugin."
+prerequisites:
+  - labels
+  - services-clusterip
+  - pod-dns
 intro: |
   # Network policies
 
@@ -20,8 +25,95 @@ intro: |
   **Kind's default CNI does not enforce them.** So on this cluster
   you can *write* a policy, but it will not block traffic. This
   lesson is for reading only.
+warm_up:
+  - prompt: "How does a Service pick which Pods to send traffic to?"
+    answer: "By label selector. Every Pod whose labels match `spec.selector` becomes an endpoint of the Service."
+    kind: recall
+    concept: labels
+  - prompt: "Which DNS name should app-A in namespace `web` use to reach Service `db` in namespace `data`?"
+    answer: "`db.data` (or the fully-qualified `db.data.svc.cluster.local`)."
+    kind: recall
+    concept: pod-dns
+  - prompt: "In the ClusterIP lesson, what does `port` vs `targetPort` mean?"
+    answer: "`port` is the port on the Service (clients dial). `targetPort` is the container port (where the app listens)."
+    kind: recall
+    concept: services-clusterip
 task: |
   No task. Press `c` to mark as read.
+troubleshooting:
+  scenario: |
+    Team turns on this policy at 9am. By 9:05 every app in the
+    namespace is offline; even CoreDNS lookups fail.
+    ```yaml
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata: { name: default-deny, namespace: web }
+    spec:
+      podSelector: {}
+      policyTypes: [Ingress, Egress]
+    ```
+  question: "What did this policy do, and what is missing?"
+  diagnosis: |
+    `podSelector: {}` = **every Pod in this namespace**.
+    `policyTypes: [Ingress, Egress]` with no `ingress:` /
+    `egress:` rules = **deny all** incoming AND outgoing traffic.
+    Even DNS to `kube-system` (CoreDNS) is blocked, so nothing
+    can resolve names either.
+
+    Fix pattern: default-deny is fine, but pair it with allow-
+    lists, e.g.:
+    ```yaml
+    egress:
+      - to:
+          - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        ports:
+          - { protocol: UDP, port: 53 }
+    ```
+    Roll out policies gradually and test each namespace before
+    enforcing everywhere.
+  concept: network-policy
+review_questions:
+  - prompt: "What does `podSelector: {}` mean in a NetworkPolicy?"
+    kind: multiple_choice
+    options:
+      - "No Pods selected — the policy does nothing"
+      - "Every Pod in the same namespace"
+      - "Every Pod in the whole cluster"
+      - "The Pods listed in `spec.pods`"
+    answer: "Every Pod in the same namespace."
+    concept: network-policy
+  - prompt: "You applied a NetworkPolicy on kind but traffic is NOT blocked. What is the reason?"
+    kind: debug
+    answer: "Kind's default CNI does not enforce NetworkPolicies. You need a CNI plugin like Calico or Cilium for policies to take effect."
+    concept: network-policy
+  - prompt: "You want only frontend Pods to reach `db` Pods. Sketch the ingress rule."
+    kind: scenario
+    answer: "```yaml\ningress:\n  - from:\n      - podSelector: { matchLabels: { role: frontend } }\n```\nApplied to `db` Pods via `spec.podSelector: { matchLabels: { app: db } }`."
+    concept: network-policy
+  - prompt: "True or false: without any NetworkPolicy in a namespace, all Pods can talk to all Pods."
+    kind: recall
+    answer: "True. Default is all-to-all. Policies only *restrict*."
+    concept: network-policy
+common_mistakes:
+  - mistake: "Rolling out a default-deny policy without allowing DNS. Everything breaks."
+    fix: "Always add an egress rule for UDP 53 to `kube-system` (CoreDNS) before enforcing default-deny."
+  - mistake: "Assuming NetworkPolicies work on any cluster."
+    fix: "Check the CNI first. Kind's default (`kindnetd`) does not enforce them; install Calico or use a different CNI."
+  - mistake: "Selecting Pods by the wrong label. Policy applies to nothing."
+    fix: "Verify with `kubectl get pods --show-labels` and copy the exact key/value into `podSelector.matchLabels`."
+summary: |
+  A NetworkPolicy is a Pod-level firewall using labels. `pod
+  Selector` picks target Pods; `ingress` / `egress` rules say
+  what is allowed. Policies need a CNI plugin that enforces them
+  (Calico, Cilium) — kind's default does not. Roll them out
+  gradually and always allow DNS.
+spaced_hooks:
+  - concept: network-policy
+    when: next
+  - concept: network-policy
+    when: "2-3"
+  - concept: network-policy
+    when: "5-7"
 cheat: |
   ### NetworkPolicies
   - Firewall for Pods. Default: all-to-all is allowed.

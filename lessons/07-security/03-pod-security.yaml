@@ -3,6 +3,12 @@ title: "Pod security"
 module: security
 order: 3
 estimated_minutes: 10
+learning_goal: "Explain the small securityContext settings that make a Pod safer, and know what Pod Security Admission levels mean."
+prerequisites:
+  - pods
+  - rbac
+  - network-policy
+  - secret
 intro: |
   # Pod security
 
@@ -25,8 +31,98 @@ intro: |
 
   This lesson is for reading. Later lessons will build Pods with
   these settings.
+warm_up:
+  - prompt: "What is a Pod? (one line)"
+    answer: "The smallest unit in Kubernetes. It runs one (or a few) containers that share IP and volumes."
+    kind: recall
+    concept: pods
+  - prompt: "You want SA `viewer` to only `get` and `list` services. Which two RBAC objects do you create?"
+    answer: "A `Role` with `verbs: [get, list]` on `services`, and a `RoleBinding` from that Role to `viewer`."
+    kind: recall
+    concept: rbac
+  - prompt: "Where should you keep a database password?"
+    answer: "In a Kubernetes Secret, wired into the Pod with `secretKeyRef`. Not in a ConfigMap and not in the image."
+    kind: recall
+    concept: secret
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A team ships this container spec to production:
+    ```yaml
+    containers:
+      - name: web
+        image: my/web:1.0
+        securityContext:
+          privileged: true
+          runAsUser: 0
+    ```
+    Security review rejects it in one minute.
+  question: "Which two settings are dangerous, and how do you rewrite it safely?"
+  diagnosis: |
+    - `privileged: true` — the container can access the host
+      like a real root user. A compromise = node compromise.
+    - `runAsUser: 0` — the process runs as root inside the
+      container. Combined with a mounted host path, this is
+      a straight path off the container.
+
+    Safer version:
+    ```yaml
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    ```
+    And add a namespace label so the admission controller
+    enforces this by default:
+    ```
+    kubectl label ns prod pod-security.kubernetes.io/enforce=restricted
+    ```
+  concept: pod-security
+review_questions:
+  - prompt: "Which setting says 'the container may not run as UID 0'?"
+    kind: multiple_choice
+    options:
+      - "`privileged: false`"
+      - "`runAsNonRoot: true`"
+      - "`readOnlyRootFilesystem: true`"
+      - "`allowPrivilegeEscalation: false`"
+    answer: "`runAsNonRoot: true`."
+    concept: pod-security
+  - prompt: "Name the three Pod Security Admission levels from most to least permissive."
+    kind: recall
+    answer: "`privileged` (no restrictions), `baseline` (blocks known bad patterns), `restricted` (heavily restricted, follows hardening best practices)."
+    concept: pod-security
+  - prompt: "A Pod crashes on start with 'operation not permitted' after you added `capabilities.drop: [ALL]`. What is likely missing?"
+    kind: debug
+    answer: "The app needs one capability, e.g. `NET_BIND_SERVICE` to bind port 80. Add it back with `capabilities.add: [NET_BIND_SERVICE]`. Or run on a port above 1024."
+    concept: pod-security
+  - prompt: "How do you make a namespace refuse Pods that break `restricted` rules?"
+    kind: scenario
+    answer: "`kubectl label ns NS pod-security.kubernetes.io/enforce=restricted`. New Pods that break the rules are rejected at API admission time."
+    concept: pod-security
+common_mistakes:
+  - mistake: "Leaving `runAsUser: 0` (root) because the app 'just works' that way."
+    fix: "Rebuild the image with a non-root user, or set `runAsNonRoot: true` + `runAsUser: 1000` and adjust file permissions."
+  - mistake: "Using `privileged: true` to fix one small permission problem."
+    fix: "Never use `privileged` for a normal app. Grant exactly one Linux capability with `capabilities.add`."
+  - mistake: "Mounting Secrets as env vars in a privileged container."
+    fix: "Env vars are visible in `docker inspect`/`ps`. Prefer mounting Secrets as files, and never combine sensitive data with privileged containers."
+summary: |
+  Container is a weak sandbox. Turn off root, drop capabilities,
+  keep the root filesystem read-only, and never use `privileged`
+  without a very good reason. Then let **Pod Security Admission**
+  enforce the level per namespace.
+spaced_hooks:
+  - concept: pod-security
+    when: next
+  - concept: pod-security
+    when: "2-3"
+  - concept: pod-security
+    when: "5-7"
 cheat: |
   ### Pod security
   Add to `spec.containers[*].securityContext`:
