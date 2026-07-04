@@ -3,6 +3,11 @@ title: "Multi-cluster"
 module: advanced
 order: 4
 estimated_minutes: 8
+learning_goal: "Name the main multi-cluster tools and know how to switch kubectl between contexts."
+prerequisites:
+  - kubectl-basics
+  - gitops
+  - cluster-autoscaling
 intro: |
   # Many clusters, not one
 
@@ -23,14 +28,96 @@ intro: |
   - **Karmada**, **Fleet**, **Open Cluster Management** — run one
     control plane over many clusters.
   - **Istio** or **Cilium Cluster Mesh** — connect Services
-    across clusters.
+     across clusters.
   - **Argo CD ApplicationSets** — deploy the same app to many
     clusters from one file.
 
   Multi-cluster is a big topic. This lesson only names the tools
   so you know where to look next.
+warm_up:
+  - prompt: "How do you switch kubectl between clusters on your laptop?"
+    answer: "`kubectl config use-context NAME`, or `kubectl --context NAME ...` for a one-shot command."
+    kind: recall
+    concept: kubectl-basics
+  - prompt: "In GitOps, how does one Git repo drive many clusters?"
+    answer: "A GitOps agent in each cluster watches the same repo (or a folder per cluster). Tools like Argo CD ApplicationSets automate this."
+    kind: recall
+    concept: gitops
+  - prompt: "What is a Cluster Autoscaler for?"
+    answer: "To add and remove nodes so Pending Pods can be scheduled and idle nodes are cleaned up."
+    kind: recall
+    concept: cluster-autoscaling
 task: |
   No task. Press `c`. Congratulations — you finished the roadmap!
+troubleshooting:
+  scenario: |
+    An app in cluster A calls an app in cluster B by Service DNS:
+    ```
+    http://payments.default.svc.cluster.local
+    ```
+    From cluster A it always fails with `no such host`. Both
+    Services exist in their own clusters. The clusters are joined
+    with a mesh, but calls still fail.
+  question: "Why does cluster-local DNS not work across clusters?"
+  diagnosis: |
+    `svc.cluster.local` is a **cluster-local** DNS name. Each
+    cluster has its own DNS. The name of a Service in cluster B is
+    not known inside cluster A by default.
+
+    Fix options:
+    - Use the mesh's global DNS (Istio multi-cluster:
+      `payments.default.global`).
+    - Or expose the Service outside (Ingress, gateway) and call it
+      by public hostname.
+    - Or use Cilium Cluster Mesh, which shares Services across
+      clusters when you opt in.
+
+    Also plan for network partitions: cross-cluster calls fail more
+    often than in-cluster ones. Add retries and timeouts.
+  concept: multi-cluster
+review_questions:
+  - prompt: "Which tool manages clusters as Kubernetes objects (a control plane for clusters)?"
+    kind: multiple_choice
+    options:
+      - "Argo CD"
+      - "Cluster API (CAPI)"
+      - "Prometheus"
+      - "Helm"
+    answer: "Cluster API (CAPI). You describe a Cluster in YAML and CAPI creates it."
+    concept: multi-cluster
+  - prompt: "You want to deploy the same app to `dev`, `stage`, and `prod` clusters from one Git repo. Which pattern helps?"
+    kind: scenario
+    answer: "Argo CD ApplicationSet (or Flux Kustomization per cluster). One template, many target clusters."
+    concept: multi-cluster
+  - prompt: "Why is `svc.cluster.local` not enough for cross-cluster calls?"
+    kind: debug
+    answer: "That DNS is cluster-local. To call across clusters, use a mesh (Istio, Cilium Cluster Mesh) or an external Ingress endpoint."
+    concept: multi-cluster
+  - prompt: "True or false: multi-cluster removes the need for autoscaling."
+    kind: recall
+    answer: "False. Each cluster still scales its own Pods and nodes. Multi-cluster only changes where clusters live and how they connect."
+    concept: multi-cluster
+common_mistakes:
+  - mistake: "Assuming a low-latency, always-on connection between clusters."
+    fix: "Design for partitions: use retries, timeouts, circuit breakers, and prefer per-region reads."
+  - mistake: "Copying the same manifests by hand into every cluster."
+    fix: "Use ApplicationSets, Fleet, or Karmada so one source drives many clusters."
+  - mistake: "Sharing one kubeconfig context for all clusters and running scary commands in the wrong one."
+    fix: "Keep separate contexts, use `kubectl --context NAME ...`, and set a shell prompt that shows the context."
+summary: |
+  Multi-cluster splits load by region, environment, or team.
+  Cluster API creates the clusters; Karmada/Fleet/OCM group them;
+  Istio or Cilium Cluster Mesh connects them; Argo CD
+  ApplicationSets keep the apps in sync. You now know where to
+  look for the capstone project. Well done — the roadmap is
+  complete.
+spaced_hooks:
+  - concept: multi-cluster
+    when: capstone
+  - concept: gitops
+    when: capstone
+  - concept: cluster-autoscaling
+    when: capstone
 cheat: |
   ### Multi-cluster
   Why many clusters: regions, environments, blast-radius.

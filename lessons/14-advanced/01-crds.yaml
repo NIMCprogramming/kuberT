@@ -3,6 +3,11 @@ title: "Custom Resource Definitions (CRDs)"
 module: advanced
 order: 1
 estimated_minutes: 10
+learning_goal: "Explain what a CRD is, list the CRDs already installed on your cluster, and see them via `kubectl api-resources`."
+prerequisites:
+  - yaml-apply
+  - gitops
+  - kubectl-basics
 intro: |
   # CRDs — add your own kinds
 
@@ -32,6 +37,19 @@ intro: |
 
   This is how big projects like **cert-manager**, **Istio**, and
   **Argo CD** extend Kubernetes.
+warm_up:
+  - prompt: "What does `kubectl apply -f my.yaml` do?"
+    answer: "It sends the YAML to Kubernetes. If the object does not exist, it is created; if it does, it is updated to match the file."
+    kind: recall
+    concept: yaml-apply
+  - prompt: "In GitOps, who applies YAML to the cluster?"
+    answer: "An in-cluster agent (Argo CD or Flux). It pulls YAML from Git and applies it."
+    kind: recall
+    concept: gitops
+  - prompt: "Which kubectl command lists all resource kinds the cluster understands?"
+    answer: "`kubectl api-resources`."
+    kind: recall
+    concept: kubectl-basics
 task: |
   List CRDs that already exist on your cluster (`kind` has a few
   from its default add-ons):
@@ -43,6 +61,72 @@ task: |
   Then press `c`.
 hint: "kubectl get crd --no-headers | wc -l  -- count them"
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    A team ships an updated CRD that changes a required field type
+    from string to integer. After apply, existing objects fail with:
+    ```
+    admission webhook denied the request: spec.size in body must be of type integer
+    ```
+    All Databases created before the change are now broken.
+  question: "What kind of change did they make, and how do you avoid this?"
+  diagnosis: |
+    They made a **breaking schema change**: `spec.size` used to be
+    a string, now it must be an integer. Old data does not match
+    the new schema.
+
+    Better plan:
+    - Version the API: add `v1beta2` next to `v1`. Serve both,
+      pick one as `storage: true`.
+    - Write a conversion webhook (or migration job) between
+      versions.
+    - Retire the old version only after all objects move.
+
+    Same rule as APIs: avoid breaking changes; when needed, do them
+    in a new version.
+  concept: crds
+review_questions:
+  - prompt: "What does a CRD add to the cluster?"
+    kind: multiple_choice
+    options:
+      - "A new controller."
+      - "A new kind of object the API server can store and validate."
+      - "A new node."
+      - "A new namespace."
+    answer: "A new kind of object the API server can store and validate. A controller is a separate piece."
+    concept: crds
+  - prompt: "You applied a CRD, and `kubectl get databases` returns `No resources found`. But no error. What is happening?"
+    kind: scenario
+    answer: "The CRD is installed (that is why the command runs), but no `Database` object exists yet. Create one with `kubectl apply -f mydb.yaml` for `kind: Database`."
+    concept: crds
+  - prompt: "A CRD without a controller — what happens if you create objects of that kind?"
+    kind: recall
+    answer: "The objects are stored in etcd. Nothing else happens: no Pods, no volumes, no actions. A controller is what makes CRDs useful."
+    concept: crds
+  - prompt: "True or false: adding a required field to a CRD schema is always safe."
+    kind: recall
+    answer: "False. Existing objects without that field become invalid. Add it as optional, migrate data, then make it required."
+    concept: crds
+common_mistakes:
+  - mistake: "Making a breaking schema change to a live CRD (renaming, changing type)."
+    fix: "Bump the version (`v1` → `v1beta2`) and offer a conversion path. Never mutate the current version in a breaking way."
+  - mistake: "Forgetting that a CRD alone does nothing without a controller."
+    fix: "Install the operator that ships with the CRD; check its Pods are running before creating objects."
+  - mistake: "Giving CRD objects cluster scope when they should be namespaced."
+    fix: "Choose `scope: Namespaced` unless the resource really is cluster-wide (like ClusterRole)."
+summary: |
+  A CRD adds a new kind to the API server so you can `kubectl
+  apply` it. On its own it only stores data — the next lesson
+  adds a controller to act on it. Together they form an
+  Operator. Handle schema changes with the same care you would a
+  public API.
+spaced_hooks:
+  - concept: crds
+    when: next
+  - concept: crds
+    when: "2-3"
+  - concept: crds
+    when: capstone
 cheat: |
   ### CRDs (Custom Resource Definitions)
   Teach the cluster a new "kind" of object.

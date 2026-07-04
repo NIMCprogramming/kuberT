@@ -3,6 +3,11 @@ title: "Custom controllers and Operators"
 module: advanced
 order: 2
 estimated_minutes: 10
+learning_goal: "Explain the reconcile loop, and describe how a CRD plus a custom controller equals an Operator."
+prerequisites:
+  - crds
+  - rbac
+  - deployments
 intro: |
   # Controllers and Operators
 
@@ -36,8 +41,91 @@ intro: |
   - **Metacontroller**, **KOPF** — write in Python.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "What does a CRD add to the cluster?"
+    answer: "A new kind of object the API server can store and validate. It does not act by itself."
+    kind: recall
+    concept: crds
+  - prompt: "What does RBAC control?"
+    answer: "Which subject (user, group, ServiceAccount) can call which verb on which resource."
+    kind: recall
+    concept: rbac
+  - prompt: "What is the smallest object a Deployment controller creates and manages under the hood?"
+    answer: "A ReplicaSet. The ReplicaSet controller then creates the Pods."
+    kind: recall
+    concept: deployments
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A team wrote a custom controller in Go. It watches a CRD
+    `Widget`. On startup, the controller's log fills with:
+    ```
+    reconcile error: widgets.example.com is forbidden: User
+    "system:serviceaccount:ops:widget-controller" cannot list
+    resource "widgets" in API group "example.com" at the cluster
+    scope
+    ```
+    The controller crashes and restarts in a tight loop.
+  question: "What are the two problems, and how do you fix them?"
+  diagnosis: |
+    Two things at once:
+
+    1. **RBAC missing.** The controller's ServiceAccount has no
+       permission to list `widgets`. Fix: create a ClusterRole with
+       `apiGroups: ["example.com"], resources: ["widgets"], verbs:
+       ["get","list","watch","update","patch"]`, and bind it to
+       the ServiceAccount.
+
+    2. **No back-off.** A controller that crashes on every reconcile
+       floods the API. The reconcile loop should return an error
+       and let the workqueue re-queue with exponential back-off,
+       not `os.Exit`.
+
+    Fix RBAC first; the crash-loop stops. Then check the code
+    handles errors without crashing.
+  concept: custom-controllers
+review_questions:
+  - prompt: "What is the classic pattern all Kubernetes controllers follow?"
+    kind: multiple_choice
+    options:
+      - "Cron trigger"
+      - "Watch → diff → act → repeat"
+      - "Push notification"
+      - "Batch job at midnight"
+    answer: "Watch → diff → act → repeat (the reconcile loop)."
+    concept: custom-controllers
+  - prompt: "You need an Operator that manages a Kafka cluster. What framework fits a Go team?"
+    kind: scenario
+    answer: "Kubebuilder or Operator SDK (both Go). For a Python team: KOPF or Metacontroller."
+    concept: custom-controllers
+  - prompt: "Your controller reconciles too often and hits API rate limits. What is a common fix?"
+    kind: debug
+    answer: "Add exponential back-off on errors, use resync periods carefully, and only requeue when you must. Frameworks like controller-runtime handle this for you."
+    concept: custom-controllers
+  - prompt: "True or false: CRD plus controller equals Operator."
+    kind: recall
+    answer: "True. A CRD holds data; a controller acts on it. Together they package a full application pattern."
+    concept: custom-controllers
+common_mistakes:
+  - mistake: "Reconcile loop crashes on error (`os.Exit`) with no back-off."
+    fix: "Return the error to the workqueue; frameworks retry with exponential back-off."
+  - mistake: "Controller ServiceAccount has no RBAC for its CRD."
+    fix: "Create a ClusterRole with `get/list/watch/update/patch/delete` on the CRD group and resources; bind to the ServiceAccount."
+  - mistake: "Reconciler mutates objects it does not own (leaking blast radius)."
+    fix: "Own only what the CRD spec says; use owner references so garbage collection works."
+summary: |
+  A controller is a small program that runs the reconcile loop
+  for a specific kind. Add one to a CRD and you have an Operator.
+  Kubebuilder and Operator SDK are the go-to frameworks. Get RBAC
+  and back-off right and you will avoid the two classic bugs.
+spaced_hooks:
+  - concept: custom-controllers
+    when: next
+  - concept: custom-controllers
+    when: "2-3"
+  - concept: custom-controllers
+    when: capstone
 cheat: |
   ### Controllers and Operators
   - K8s = **reconcile loop**: watch → diff → act → repeat.

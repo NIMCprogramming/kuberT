@@ -3,6 +3,11 @@ title: "Custom schedulers"
 module: advanced
 order: 3
 estimated_minutes: 6
+learning_goal: "Describe three levels of scheduler customization and name projects that add batch or ML scheduling to Kubernetes."
+prerequisites:
+  - scheduling-basics
+  - taints-tolerations
+  - custom-controllers
 intro: |
   # Custom schedulers
 
@@ -27,8 +32,81 @@ intro: |
   - **Yunikorn** — big data / Spark on Kubernetes.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "What does the default scheduler do?"
+    answer: "It picks a node for each Pending Pod, based on requests, node capacity, taints, affinity, and other rules."
+    kind: recall
+    concept: scheduling-basics
+  - prompt: "What is a taint on a node for?"
+    answer: "It keeps Pods away from the node unless they have a matching toleration."
+    kind: recall
+    concept: taints-tolerations
+  - prompt: "What is a controller in Kubernetes?"
+    answer: "A program that watches a resource, compares desired vs real state, and acts to make them match."
+    kind: recall
+    concept: custom-controllers
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A team runs a second scheduler `ml-scheduler` for GPU jobs.
+    They deploy a Pod with:
+    ```yaml
+    spec:
+      schedulerName: ml-scheduler
+    ```
+    But another Pod (no `schedulerName`) also lands on a GPU node
+    and blocks a real ML job. Both schedulers seem to fight for
+    the same nodes.
+  question: "Why does the default scheduler still pick GPU nodes?"
+  diagnosis: |
+    Two schedulers run in parallel and see all nodes. The default
+    scheduler does not know GPU nodes are "reserved" unless you
+    tell it.
+
+    Fix: put a **taint** on GPU nodes (e.g. `gpu=true:NoSchedule`).
+    Only Pods that tolerate the taint (the ML ones) can land there.
+    Both schedulers now agree: the default one skips GPU nodes,
+    the ML scheduler runs its Pods there.
+  concept: custom-schedulers
+review_questions:
+  - prompt: "How does a Pod tell Kubernetes to use a specific scheduler?"
+    kind: multiple_choice
+    options:
+      - "`spec.schedulerName: NAME`"
+      - "`metadata.schedulerName: NAME`"
+      - "A special annotation, `scheduler.io/use`"
+      - "You cannot pick a scheduler."
+    answer: "`spec.schedulerName: NAME` on the Pod."
+    concept: custom-schedulers
+  - prompt: "A team wants to add job queueing on top of the default scheduler without replacing it. Which project?"
+    kind: scenario
+    answer: "Kueue. It handles job queueing and admission on top of the standard scheduler."
+    concept: custom-schedulers
+  - prompt: "What is the smallest change if you only want to turn off one scoring plugin?"
+    kind: recall
+    answer: "Use a scheduler profile in `KubeSchedulerConfiguration` and disable that plugin. No new scheduler needed."
+    concept: custom-schedulers
+  - prompt: "True or false: writing a fully custom scheduler from scratch is the common way to solve most scheduling issues."
+    kind: recall
+    answer: "False. Most cases are solved with affinity, taints, priorities, or a scheduler profile. A custom scheduler is a last resort."
+    concept: custom-schedulers
+common_mistakes:
+  - mistake: "Running a second scheduler without taints on the target nodes."
+    fix: "Taint the special nodes so the default scheduler stays away; only Pods with a matching toleration and `schedulerName` land there."
+  - mistake: "Writing a scheduler from scratch when scheduler profiles or Kueue would fit."
+    fix: "Try the small levels first (profiles, second scheduler). Full custom schedulers are rare and hard to maintain."
+summary: |
+  Kubernetes lets you shape scheduling in three levels: tweak the
+  default scheduler with profiles, run a second scheduler for a
+  set of Pods, or write a custom one for very special workloads.
+  For batch, ML, and big data, look at Volcano, Kueue, and
+  Yunikorn before starting from scratch.
+spaced_hooks:
+  - concept: custom-schedulers
+    when: next
+  - concept: custom-schedulers
+    when: capstone
 cheat: |
   ### Custom schedulers
   - Tweak default: **scheduler profiles** in `KubeSchedulerConfiguration`.
