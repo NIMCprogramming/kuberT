@@ -3,6 +3,11 @@ title: "Your first Pod"
 module: running-apps
 order: 1
 estimated_minutes: 15
+learning_goal: "Create a Pod from YAML, verify it is Running, and read its logs."
+prerequisites:
+  - containers
+  - kubectl
+  - yaml-apply
 intro: |
   # Pods
 
@@ -40,13 +45,34 @@ intro: |
   ```
   Then: `kubectl apply -f my-pod.yaml`
 
+  ## Wait — you already know part of this
+
+  - A **container** (module 02) is the thing that runs inside a Pod.
+  - `kubectl apply -f` (module 03) is how you send YAML to the
+    cluster. A Pod is just another YAML kind.
+  - The `labels` block will come back in almost every lesson from
+    here: Services, ReplicaSets, and NetworkPolicies all use
+    labels to find Pods.
+
   ## What can you do with a Pod?
 
   - **logs**: `kubectl logs <pod>`
   - **shell inside**: `kubectl exec -it <pod> -- sh`
   - **see internal IP**: `kubectl get pod <pod> -o wide`
   - **delete**: `kubectl delete pod <pod>`
-
+warm_up:
+  - prompt: "What is a container? (one sentence)"
+    answer: "A running instance of an image. It packages your app and its libraries so it runs the same anywhere."
+    kind: recall
+    concept: containers
+  - prompt: "Which kubectl command shows all Pods in the current namespace?"
+    answer: "`kubectl get pods` (add `-A` to see all namespaces)."
+    kind: recall
+    concept: kubectl-basics
+  - prompt: "What does `kubectl apply -f my.yaml` do?"
+    answer: "It sends the YAML to Kubernetes. If the resource does not exist, it is created; if it does, it is updated to match the file."
+    kind: recall
+    concept: yaml-apply
 task: |
   **Your goal:** build a Pod from YAML (not `kubectl run`),
   then inspect it.
@@ -80,6 +106,79 @@ hint: |
   - Fields to fill: `metadata.name`, `metadata.labels`, `spec.containers[0].image`, `spec.containers[0].ports[0].containerPort`.
   - Verify labels: `kubectl get pod hello --show-labels`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You applied this YAML and then ran `kubectl get pod hello`.
+    STATUS shows `ImagePullBackOff` and never becomes `Running`.
+    ```yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: hello
+      labels: { app: hello }
+    spec:
+      containers:
+        - name: c
+          image: nginx:2.99   # <-- this tag does not exist
+          ports:
+            - containerPort: 80
+    ```
+  question: "What is wrong, and how do you find the exact error before you fix it?"
+  diagnosis: |
+    The image tag `nginx:2.99` does not exist on Docker Hub, so the
+    node cannot pull it. Kubernetes keeps retrying and shows
+    `ImagePullBackOff`.
+
+    How to see the real message:
+    - `kubectl describe pod hello` — the `Events` section at the bottom shows the pull error.
+
+    Fix: change the image to `nginx` (or a real tag like `nginx:1.27`) and re-apply.
+  concept: images
+review_questions:
+  - prompt: "Two containers running in the same Pod share which of the following?"
+    kind: multiple_choice
+    options:
+      - "Only the same node"
+      - "The same IP address and (optionally) the same volumes"
+      - "Nothing — they are fully isolated"
+      - "The same CPU count only"
+    answer: "The same IP address and (optionally) the same volumes."
+    concept: pods
+  - prompt: "You applied a Pod but `kubectl get pods -l app=hello` returns nothing. The Pod is Running. What is the most likely cause?"
+    kind: debug
+    answer: "You forgot the `labels: { app: hello }` block in `metadata`. The Pod exists but has no `app=hello` label, so the selector matches nothing. Add the label and re-apply."
+    concept: labels
+  - prompt: "You need to open a shell inside a running Pod named `hello` to check a file. Which command?"
+    kind: scenario
+    answer: "`kubectl exec -it hello -- sh` (or `bash` if the image has it)."
+    concept: kubectl-basics
+  - prompt: "True or false: if you delete a stand-alone Pod, Kubernetes will recreate it."
+    kind: recall
+    answer: "False. A stand-alone Pod is gone once deleted. Only a controller (like a ReplicaSet or Deployment) recreates Pods for you."
+    concept: pods
+common_mistakes:
+  - mistake: "Forgetting `metadata.labels`. Later Services and ReplicaSets cannot find the Pod."
+    fix: "Always add at least one label under `metadata.labels`, matching what your Service selector will use."
+  - mistake: "Confusing `containerPort` with a real published port."
+    fix: "`containerPort` is documentation only — the Pod still runs even without it. To expose a Pod to the network, put a Service in front of it (module 06)."
+  - mistake: "Using a made-up image tag like `nginx:latest-fast`."
+    fix: "If the tag does not exist, you get `ErrImagePull` / `ImagePullBackOff`. Check Docker Hub or your registry for real tags."
+summary: |
+  A Pod is one running container (usually) with its own IP,
+  its own labels, and a lifecycle you can watch with `kubectl`.
+  You will keep using labels to connect Pods to Services,
+  ReplicaSets, and NetworkPolicies for the rest of the course.
+spaced_hooks:
+  - concept: pods
+    when: next
+  - concept: labels
+    when: next
+  - concept: pods
+    when: "2-3"
+  - concept: labels
+    when: "5-7"
+  - concept: pods
+    when: capstone
 cheat: |
   ### Pods
   - Smallest unit. Runs 1+ containers that share IP and volumes.
