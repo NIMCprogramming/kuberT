@@ -3,6 +3,11 @@ title: "CI/CD for Kubernetes"
 module: deployment-patterns
 order: 1
 estimated_minutes: 8
+learning_goal: "Explain the CI vs CD split and describe a basic pipeline that ships an image to a Kubernetes cluster."
+prerequisites:
+  - docker-basics
+  - deployments
+  - logs
 intro: |
   # CI and CD
 
@@ -26,8 +31,85 @@ intro: |
     part.
   - **Argo CD**, **Flux** — pull-based CD (next lesson: GitOps).
   - **Spinnaker**, **Jenkins** — older push-based CD.
+warm_up:
+  - prompt: "What does `docker build -t myimg:1 .` do?"
+    answer: "It builds a Docker image tagged `myimg:1` from the `Dockerfile` in the current folder."
+    kind: recall
+    concept: docker-basics
+  - prompt: "How does a Deployment roll out a new image without downtime?"
+    answer: "It replaces Pods a few at a time (a rolling update), waiting for new Pods to become ready."
+    kind: recall
+    concept: deployments
+  - prompt: "Where do you see the last error a container printed?"
+    answer: "`kubectl logs POD` for a running Pod, or `kubectl logs POD --previous` for the last crash."
+    kind: recall
+    concept: logs
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A GitHub Action builds `myapp:latest` and then applies a
+    Deployment that uses `image: myapp:latest`. New Pods start,
+    but they still show the **old** code. The pipeline is green.
+  question: "Why does the cluster keep the old code, and how do you fix the pipeline?"
+  diagnosis: |
+    Two classic mistakes:
+    1. The image was built but **not pushed** to a registry the
+       cluster can reach. Nodes cannot pull `myapp:latest` from the
+       CI runner.
+    2. Even after pushing, the tag `latest` did not change in the
+       Deployment YAML. Kubernetes sees the same tag and skips a
+       rollout.
+
+    Fix:
+    - Push the image (`docker push myapp:1.2.3`) to a real
+      registry.
+    - Use a unique tag per build (like the Git SHA), and update
+      the Deployment to that tag. Now Kubernetes does a real
+      rolling update.
+  concept: ci-cd
+review_questions:
+  - prompt: "Which sentence best matches CD?"
+    kind: multiple_choice
+    options:
+      - "Runs unit tests on every push."
+      - "Builds a Docker image and stores it locally."
+      - "Ships a built artifact to a cluster or environment."
+      - "Formats code and files a lint report."
+    answer: "Ships a built artifact to a cluster or environment."
+    concept: ci-cd
+  - prompt: "Your team stores a database password directly in `.github/workflows/deploy.yaml`. Why is this bad?"
+    kind: scenario
+    answer: "Secrets in Git are visible to anyone with repo access and cannot be rotated cleanly. Use GitHub Actions secrets or a secret manager, and inject them at runtime."
+    concept: secrets
+  - prompt: "CI is green. Deployment YAML still points to `myapp:latest`, and no rollout happened. Why?"
+    kind: debug
+    answer: "The image tag did not change, so Kubernetes sees the same spec and does nothing. Use a unique tag (Git SHA) per build and update the Deployment to that tag."
+    concept: ci-cd
+  - prompt: "True or false: CI/CD requires a paid SaaS tool."
+    kind: recall
+    answer: "False. Open-source tools (GitHub Actions free tier, GitLab CI, Jenkins, Argo CD, Flux) all work for CI/CD on Kubernetes."
+    concept: ci-cd
+common_mistakes:
+  - mistake: "Committing secrets or `.env` files to Git for the pipeline to read."
+    fix: "Use the CI system's secret store (GitHub Actions secrets, GitLab CI variables) and mount them at runtime."
+  - mistake: "Reusing the `latest` tag for every build."
+    fix: "Tag with the Git SHA or a semver number. Deployments only roll when the tag changes."
+  - mistake: "Skipping image scans for known CVEs."
+    fix: "Add a scan step (Trivy, Grype) between build and push, and fail the build on high-severity CVEs."
+summary: |
+  CI checks the code and builds an image; CD ships that image to
+  a cluster and updates the Deployment. Keep secrets out of Git,
+  use unique image tags per build, and let Kubernetes do the
+  rolling update. The next lesson turns CD into a pull model with
+  GitOps.
+spaced_hooks:
+  - concept: ci-cd
+    when: next
+  - concept: ci-cd
+    when: "2-3"
+  - concept: ci-cd
+    when: capstone
 cheat: |
   ### CI / CD
   - **CI** — build + test on every push.

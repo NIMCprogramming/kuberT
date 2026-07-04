@@ -3,6 +3,11 @@ title: "Rolling updates and rollbacks"
 module: deployment-patterns
 order: 6
 estimated_minutes: 18
+learning_goal: "Roll out a new image with `kubectl set image`, watch the status, and roll back to the previous revision."
+prerequisites:
+  - deployments
+  - replicasets
+  - probes
 intro: |
   # Rolling update
 
@@ -53,7 +58,19 @@ intro: |
   kubectl rollout undo deploy/NAME               # go back one
   kubectl rollout undo deploy/NAME --to-revision=2
   ```
-
+warm_up:
+  - prompt: "What does a Deployment own that manages the Pods directly?"
+    answer: "A ReplicaSet. The Deployment creates a new ReplicaSet per revision and scales old ones down."
+    kind: recall
+    concept: replicasets
+  - prompt: "Which probe tells Kubernetes 'this Pod can receive traffic now'?"
+    answer: "The readiness probe. During a rolling update, K8s waits for it to pass before moving to the next Pod."
+    kind: recall
+    concept: probes
+  - prompt: "What field on a Deployment sets how many Pods it runs?"
+    answer: "`spec.replicas`."
+    kind: recall
+    concept: deployments
 task: |
   **Your goal:** do a full "update, then roll back" flow with
   clear proof at each step.
@@ -82,6 +99,74 @@ hint: |
   - Undo: `kubectl rollout undo deploy/ver`
   - Current image: `kubectl get deploy ver -o jsonpath='{.spec.template.spec.containers[0].image}'`
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    A team ships a rolling update on a 4-replica Deployment with:
+    ```yaml
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 100%
+    ```
+    During the roll, all 4 old Pods are killed at once and users
+    see a big spike of 502 errors.
+  question: "Why does the rolling update behave like a Recreate?"
+  diagnosis: |
+    `maxUnavailable: 100%` means "all Pods can be down at once."
+    Combined with `maxSurge: 0` (no extras), Kubernetes has no
+    choice but to kill every old Pod before new Pods are ready.
+
+    Fix: use safe defaults, for example:
+    ```yaml
+    maxSurge: 1
+    maxUnavailable: 0
+    ```
+    Now K8s starts a new Pod, waits for readiness, then kills one
+    old Pod. Zero downtime.
+  concept: rolling-updates
+review_questions:
+  - prompt: "Which strategy replaces Pods gradually while keeping the app up?"
+    kind: multiple_choice
+    options:
+      - "Recreate"
+      - "RollingUpdate"
+      - "OnDelete"
+      - "Immediate"
+    answer: "RollingUpdate. It replaces a few Pods at a time and waits for readiness."
+    concept: rolling-updates
+  - prompt: "Rollout stuck at 3/5 replicas. New Pods stay `NotReady`. Where do you look first?"
+    kind: debug
+    answer: "Readiness probe: `kubectl describe pod POD` and `kubectl logs POD`. If the probe never passes, the rollout stalls by design."
+    concept: probes
+  - prompt: "You want to jump back two revisions of a Deployment. Which command?"
+    kind: scenario
+    answer: "`kubectl rollout undo deploy/NAME --to-revision=K` where K is the target revision from `kubectl rollout history deploy/NAME`."
+    concept: rolling-updates
+  - prompt: "True or false: rolling back a Deployment restarts every Pod at once."
+    kind: recall
+    answer: "False. Rollback is another rolling update, so it also respects `maxSurge` and `maxUnavailable`."
+    concept: rolling-updates
+common_mistakes:
+  - mistake: "`maxUnavailable: 100%` — every Pod can die at once."
+    fix: "Use `maxSurge: 1`, `maxUnavailable: 0` for zero-downtime rollouts."
+  - mistake: "No readiness probe on the container."
+    fix: "Add one. Without it, Kubernetes marks Pods ready too early and moves on before the app can serve."
+  - mistake: "Assuming a rollback restores data too."
+    fix: "Rollback only restores the Pod spec/image. Any database migration you ran forward must be reversed on its own."
+summary: |
+  Rolling updates replace Pods a few at a time. `maxSurge` and
+  `maxUnavailable` control the pace, and readiness probes gate
+  each step. `kubectl rollout status/history/undo` is your main
+  toolbox. Combined with canary and blue-green, you now have all
+  three deploy patterns.
+spaced_hooks:
+  - concept: rolling-updates
+    when: next
+  - concept: rolling-updates
+    when: "2-3"
+  - concept: rolling-updates
+    when: capstone
 cheat: |
   ### Rolling updates
   Default strategy on a Deployment. Knobs:

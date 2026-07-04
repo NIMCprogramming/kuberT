@@ -3,6 +3,11 @@ title: "Helm — the K8s package manager"
 module: deployment-patterns
 order: 3
 estimated_minutes: 8
+learning_goal: "Name the three Helm concepts (chart, repository, release) and describe the common install/upgrade/uninstall flow."
+prerequisites:
+  - helm
+  - configmaps
+  - gitops
 intro: |
   # Helm
 
@@ -30,8 +35,88 @@ intro: |
 
   This lesson is for reading only. The `helm` CLI is not installed
   in this environment by default.
+warm_up:
+  - prompt: "What command did you use to install Traefik with Helm in the earlier ingress lesson?"
+    answer: "`helm install traefik traefik/traefik ...` after `helm repo add traefik ...` and `helm repo update`."
+    kind: recall
+    concept: helm
+  - prompt: "What does a ConfigMap store?"
+    answer: "Non-secret config data as key/value pairs, mounted as env vars or files in a Pod."
+    kind: recall
+    concept: configmaps
+  - prompt: "In GitOps, who applies a chart to the cluster?"
+    answer: "The in-cluster agent (Argo CD or Flux), pulling from Git. Not `helm install` from a laptop."
+    kind: recall
+    concept: gitops
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    You run:
+    ```
+    helm install my-app bitnami/nginx --version 15.0.0
+    ```
+    You get:
+    ```
+    Error: chart "nginx" version "15.0.0" not found in bitnami repo
+    ```
+    You know the version exists in Bitnami.
+  question: "What common step did you skip?"
+  diagnosis: |
+    Your local repo index is old. Helm looks up charts in a local
+    cache, not on the internet, until you refresh.
+
+    Fix:
+    ```
+    helm repo update
+    helm install my-app bitnami/nginx --version 15.0.0
+    ```
+
+    Also: check the repo is added with `helm repo list` and that
+    the chart really exists with `helm search repo bitnami/nginx`.
+  concept: helm
+review_questions:
+  - prompt: "Which Helm term means 'one install of a chart with a name'?"
+    kind: multiple_choice
+    options:
+      - "Chart"
+      - "Repository"
+      - "Release"
+      - "Template"
+    answer: "Release. You can have many releases of the same chart, each with its own values."
+    concept: helm
+  - prompt: "You want two Nginx installs on the same cluster with different values. How do you do it?"
+    kind: scenario
+    answer: "`helm install web1 bitnami/nginx -f values-web1.yaml` and `helm install web2 bitnami/nginx -f values-web2.yaml`. Two releases from one chart."
+    concept: helm
+  - prompt: "How do you roll back a Helm release to an earlier version?"
+    kind: recall
+    answer: "`helm rollback RELEASE REVISION`. See revisions with `helm history RELEASE`."
+    concept: helm
+  - prompt: "True or false: a chart's `values.yaml` is the same as a Kubernetes ConfigMap."
+    kind: recall
+    answer: "False. `values.yaml` is a template input on the client side. It may render a ConfigMap, but it is not one."
+    concept: helm
+common_mistakes:
+  - mistake: "Forgetting `helm repo update` after adding or before installing."
+    fix: "Run `helm repo update` so the local cache knows about the newest chart versions."
+  - mistake: "Using `helm install` from a laptop while a GitOps agent also watches the app."
+    fix: "Pick one owner. In GitOps, let Argo CD or Flux install the chart from Git."
+  - mistake: "Editing rendered YAML by hand after `helm install`."
+    fix: "Change `values.yaml` (or `--set`) and run `helm upgrade`. Direct edits get overwritten on the next upgrade."
+summary: |
+  Helm packages many YAML files into a chart driven by
+  `values.yaml`. A release is one live install; a repo hosts many
+  charts. In GitOps you keep chart + values in Git and let the
+  agent apply them. Common flow: add repo → update → install →
+  upgrade/rollback → uninstall.
+spaced_hooks:
+  - concept: helm
+    when: next
+  - concept: helm
+    when: "2-3"
+  - concept: helm
+    when: capstone
 cheat: |
   ### Helm
   Package manager for K8s YAML.

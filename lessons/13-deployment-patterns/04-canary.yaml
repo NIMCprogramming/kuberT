@@ -3,6 +3,11 @@ title: "Canary releases"
 module: deployment-patterns
 order: 4
 estimated_minutes: 6
+learning_goal: "Describe how a canary release shifts a small share of traffic to a new version, and name tools that automate the shift."
+prerequisites:
+  - services
+  - labels
+  - probes
 intro: |
   # Canary release
 
@@ -26,8 +31,84 @@ intro: |
   - **Flagger** — same idea, works with Istio, Linkerd, and more.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "How does a Service pick which Pods to send traffic to?"
+    answer: "By a **label selector** in `spec.selector`. Pods with matching labels become endpoints."
+    kind: recall
+    concept: services
+  - prompt: "What is a readiness probe for?"
+    answer: "Kubernetes only sends traffic to a Pod when readiness passes. It stops traffic while the Pod is starting or unhealthy."
+    kind: recall
+    concept: probes
+  - prompt: "Two Deployments have the same `app: web` label. One Service selects `app: web`. What happens?"
+    answer: "Pods from **both** Deployments are endpoints of the Service. Traffic spreads across all matching Pods."
+    kind: recall
+    concept: labels
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    You created:
+    - Deployment `web-v1`, 9 replicas, label `app: web, version: v1`.
+    - Deployment `web-canary`, 1 replica, label `app: web, version: v2`.
+    - Service `web` with selector `app: web, version: v1`.
+
+    You expected 10% of traffic on `v2`, but 0% of traffic reaches
+    the canary Pod.
+  question: "What is wrong?"
+  diagnosis: |
+    The Service selector is too tight. It only picks Pods with
+    `version: v1`, so the canary is not an endpoint.
+
+    Fix: use a wider selector on the Service (`app: web` only). The
+    canary Pod will then join the endpoints, and traffic spreads
+    across all 10 Pods (~10% to v2).
+
+    Or use a smart tool (Argo Rollouts, Flagger) that manages the
+    split with weighted routes.
+  concept: canary
+review_questions:
+  - prompt: "Which tool automates the traffic shift and auto-rollback for canaries?"
+    kind: multiple_choice
+    options:
+      - "Kustomize"
+      - "Argo Rollouts"
+      - "Helm"
+      - "kubectl scale"
+    answer: "Argo Rollouts. Flagger is another popular option."
+    concept: canary
+  - prompt: "You started a canary at 10%. Metrics show high error rate on `v2`. What should happen?"
+    kind: scenario
+    answer: "The rollout tool should auto-rollback: stop shifting traffic and remove the canary Pods (or the operator does it manually). Only ~10% of users saw the error."
+    concept: canary
+  - prompt: "Why must the canary and stable Pods share at least one label the Service selects?"
+    kind: debug
+    answer: "The Service picks endpoints by label selector. If the canary label does not match, it never gets traffic."
+    concept: labels
+  - prompt: "True or false: canary is a smart use of rolling updates plus routing."
+    kind: recall
+    answer: "True. A rolling update replaces Pods gradually; a canary lets a small share of users try the new version before the full roll."
+    concept: canary
+common_mistakes:
+  - mistake: "Sending traffic to a canary Pod that has no readiness probe."
+    fix: "Add a readiness probe. A canary should only get traffic when it is really ready."
+  - mistake: "Setting the traffic split by counting Pods but forgetting Pods can be uneven."
+    fix: "For fine control use a real traffic manager (Istio, Traefik, Rollouts, Flagger) with weights, not just Pod counts."
+  - mistake: "No rollback plan when the canary fails."
+    fix: "Define clear metrics (error rate, latency) and a rule that stops the rollout automatically."
+summary: |
+  A canary release lets a small share of users try a new version
+  first. On plain Kubernetes you can fake it with Pod counts
+  behind one Service, but tools like Argo Rollouts and Flagger do
+  it properly with weighted routes and auto-rollback. Labels and
+  readiness probes are the base you build on.
+spaced_hooks:
+  - concept: canary
+    when: next
+  - concept: canary
+    when: "2-3"
+  - concept: canary
+    when: capstone
 cheat: |
   ### Canary release
   - Send **a small percent of traffic** to a new version first.

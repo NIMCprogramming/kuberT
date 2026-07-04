@@ -3,6 +3,11 @@ title: "Blue-Green deployment"
 module: deployment-patterns
 order: 5
 estimated_minutes: 6
+learning_goal: "Describe a blue-green deployment: run two versions and switch traffic by changing the Service selector."
+prerequisites:
+  - services
+  - labels
+  - canary
 intro: |
   # Blue-Green
 
@@ -28,8 +33,88 @@ intro: |
     versions.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "How do you change which Pods a Service sends traffic to, without deleting the Service?"
+    answer: "Edit `spec.selector` to a new label. Endpoints update to the Pods with the new label."
+    kind: recall
+    concept: services
+  - prompt: "In a canary, how is traffic split?"
+    answer: "A small percent of requests goes to the new version. It grows over time if healthy."
+    kind: recall
+    concept: canary
+  - prompt: "Two Deployments have labels `version: v1` and `version: v2`. What is the fastest way to send all traffic to `v2`?"
+    answer: "Change the Service selector to `version: v2`. All new requests go to `v2`."
+    kind: recall
+    concept: labels
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A team did a blue-green swap on an app that talks to Postgres.
+    They flipped the Service to `v2`. Users see errors like:
+    ```
+    ERROR: column "email_lower" does not exist
+    ```
+    The `v2` code needs a new column. The DBA ran the migration
+    only after the swap.
+  question: "What is the root cause, and how should the team plan next time?"
+  diagnosis: |
+    The database schema change was not compatible with `v1`. The
+    swap is instant, so `v2` starts hitting a schema that is not
+    ready (or `v1` breaks when the DBA runs the migration).
+
+    Better plan:
+    1. Ship a schema migration that is **backward compatible**
+       first (add the column, keep the old one).
+    2. Deploy `v2` that reads and writes both.
+    3. When `v2` is fully live and stable, drop the old column in a
+       second migration.
+
+    This "expand → migrate → contract" pattern makes blue-green
+    (and canary) safe with databases.
+  concept: blue-green
+review_questions:
+  - prompt: "How do you roll back a blue-green swap that goes bad?"
+    kind: multiple_choice
+    options:
+      - "Delete the green Deployment."
+      - "Change the Service selector back to blue."
+      - "Restart the cluster."
+      - "Wait for HPA to fix it."
+    answer: "Change the Service selector back to blue. It is instant."
+    concept: blue-green
+  - prompt: "What is the main resource cost of blue-green vs a rolling update?"
+    kind: recall
+    answer: "You run two full copies at the same time during the swap. That is ~2x CPU/memory for a short window."
+    concept: blue-green
+  - prompt: "You need to change a DB schema in a blue-green release without downtime. What is the safe pattern?"
+    kind: scenario
+    answer: "Expand → migrate → contract: make an additive change first (both versions can use it), deploy the new code, then remove the old schema piece in a later release."
+    concept: blue-green
+  - prompt: "True or false: blue-green and canary can be built with the same tools (Argo Rollouts, Flagger)."
+    kind: recall
+    answer: "True. Both patterns are supported by these controllers, with different traffic switch rules."
+    concept: blue-green
+common_mistakes:
+  - mistake: "Making a breaking schema change and swapping traffic in one step."
+    fix: "Split the schema change into backward-compatible steps around the code deploy."
+  - mistake: "Forgetting sticky sessions or in-memory state on the blue side."
+    fix: "Users on blue may lose sessions on the swap. Store session data outside the Pod or drain traffic gently."
+  - mistake: "Deleting the blue Deployment right after the swap."
+    fix: "Keep blue running for a while so rollback is one selector change away."
+summary: |
+  Blue-green runs two full versions and switches traffic by
+  changing the Service selector. Rollback is a fast selector
+  change back. The hard parts are cost (two copies) and database
+  compatibility. Together with canary and rolling updates it is
+  one of the three main deploy patterns.
+spaced_hooks:
+  - concept: blue-green
+    when: next
+  - concept: blue-green
+    when: "2-3"
+  - concept: blue-green
+    when: capstone
 cheat: |
   ### Blue-Green
   - Two full copies: **blue** (live) and **green** (idle).

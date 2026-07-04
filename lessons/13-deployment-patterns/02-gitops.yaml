@@ -3,6 +3,11 @@ title: "GitOps"
 module: deployment-patterns
 order: 2
 estimated_minutes: 8
+learning_goal: "Explain how GitOps uses Git as the source of truth and describe the roles of Argo CD and Flux."
+prerequisites:
+  - ci-cd
+  - secrets
+  - rbac
 intro: |
   # GitOps
 
@@ -29,8 +34,82 @@ intro: |
   You can start GitOps with just one folder of YAML files. As you
   grow, you split by environment (`base/`, `overlays/dev`,
   `overlays/prod`) and use **Kustomize** or **Helm**.
+warm_up:
+  - prompt: "What is a Kubernetes Secret used for?"
+    answer: "To store small pieces of sensitive data (passwords, tokens) and mount them in Pods as env vars or files."
+    kind: recall
+    concept: secrets
+  - prompt: "What does RBAC control in a cluster?"
+    answer: "Who can do what: which user or ServiceAccount can call which verb on which resource."
+    kind: recall
+    concept: rbac
+  - prompt: "What is the difference between CI and CD?"
+    answer: "CI builds and tests code; CD delivers the built artifact to a cluster or environment."
+    kind: recall
+    concept: ci-cd
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A team uses Argo CD to sync `env/prod`. A developer runs
+    `kubectl edit deploy web -n prod` to change the image on the
+    fly. It works for 30 seconds, then the image flips back to the
+    old one. The developer's edit is gone.
+  question: "Why did the change disappear?"
+  diagnosis: |
+    Argo CD watches Git. Anything not in Git is treated as **drift**
+    and reverted to match the repo.
+
+    - The developer's `kubectl edit` did not touch Git.
+    - Argo CD saw the live state was different from Git → auto-sync
+      set it back to what Git says.
+
+    Fix: change the YAML in Git and open a PR. Merging is now the
+    deploy step. If Argo CD does not detect the drift, check the
+    `Application` sync policy.
+  concept: gitops
+review_questions:
+  - prompt: "In GitOps, how do you roll back a bad deploy?"
+    kind: multiple_choice
+    options:
+      - "Run `kubectl edit` on production."
+      - "Revert the commit in Git; the agent syncs the old state."
+      - "Delete the Deployment and recreate it by hand."
+      - "Turn off Argo CD until you fix the issue."
+    answer: "Revert the commit in Git; the agent syncs the old state."
+    concept: gitops
+  - prompt: "Your GitOps repo stores a database password in plain text in a Secret YAML. What is the right fix?"
+    kind: scenario
+    answer: "Use SealedSecrets, SOPS, or an external secret manager (Vault, cloud KMS). The repo stores encrypted data; only the cluster can decrypt it."
+    concept: secrets
+  - prompt: "What RBAC does an Argo CD agent need on a target cluster?"
+    kind: recall
+    answer: "Enough to apply the resources you deploy (Deployments, Services, ConfigMaps, ...). Avoid cluster-admin; use a scoped Role or ClusterRole per app."
+    concept: rbac
+  - prompt: "True or false: GitOps replaces the CI part of the pipeline."
+    kind: recall
+    answer: "False. CI still builds and tests images. GitOps only changes how CD works: pull from Git instead of push from a job."
+    concept: gitops
+common_mistakes:
+  - mistake: "Storing plain-text Secrets in the GitOps repo."
+    fix: "Use SealedSecrets, SOPS, or an external secret store; commit only the encrypted form."
+  - mistake: "Editing production with `kubectl` while GitOps is active."
+    fix: "All changes go through Git. Any live edit is drift and will be reverted."
+  - mistake: "Giving the GitOps agent cluster-admin everywhere."
+    fix: "Scope its Role to the namespaces and kinds it must manage."
+summary: |
+  GitOps makes Git the single source of truth. A cluster agent
+  (Argo CD or Flux) watches the repo and applies changes.
+  Rollbacks are Git reverts. Secrets need extra care so they are
+  never plain in the repo. GitOps pairs well with CI: CI builds
+  the image, GitOps pulls the new tag from Git.
+spaced_hooks:
+  - concept: gitops
+    when: next
+  - concept: gitops
+    when: "2-3"
+  - concept: gitops
+    when: capstone
 cheat: |
   ### GitOps
   - Git = single source of truth for what runs in the cluster.
