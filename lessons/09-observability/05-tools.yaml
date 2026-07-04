@@ -3,6 +3,12 @@ title: "Observability tools you should know"
 module: observability
 order: 5
 estimated_minutes: 5
+learning_goal: "Match popular observability tools to logs, metrics, or traces, and pick a starting stack."
+prerequisites:
+  - logs
+  - metrics
+  - traces
+  - probes
 intro: |
   # Tools
 
@@ -30,8 +36,91 @@ intro: |
 
   You do not need all of them. Start with logs + metrics. Add
   tracing when you have many services.
+warm_up:
+  - prompt: "Which flag on `kubectl logs` streams new lines as they appear?"
+    answer: "`-f` (short for `--follow`). Ctrl+C stops it."
+    kind: recall
+    concept: logs
+  - prompt: "Which small add-on powers `kubectl top pod` and the Horizontal Pod Autoscaler?"
+    answer: "**metrics-server**. It stores only recent CPU/memory values in memory."
+    kind: recall
+    concept: metrics
+  - prompt: "What is a span in tracing?"
+    answer: "One step of a request, with a name and a duration. Many spans build a trace."
+    kind: recall
+    concept: traces
+  - prompt: "A readiness probe fails. What does Kubernetes do to the Pod?"
+    answer: "It removes the Pod from the Service so no traffic reaches it. The container is not restarted."
+    kind: recall
+    concept: probes
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    Your team wants a simple observability setup on a small
+    Kubernetes cluster. Someone suggests installing all of these
+    on day one:
+    ```
+    - Elasticsearch + Kibana + Logstash
+    - Prometheus + Thanos + Cortex + Mimir
+    - Jaeger + Tempo + OpenTelemetry Collector
+    - Datadog agent
+    ```
+  question: "What is wrong with this plan, and what would you install first?"
+  diagnosis: |
+    Too much on day one. Every tool costs CPU, memory, and
+    maintenance time. Most of these overlap: Thanos and Mimir do
+    the same job; Jaeger and Tempo do the same job.
+
+    A sane start:
+    1. **Logs**: Loki + Grafana (or the built-in `kubectl logs`
+       while you are small).
+    2. **Metrics**: metrics-server for HPA, Prometheus + Grafana
+       for dashboards.
+    3. **Traces**: add OpenTelemetry + Jaeger (or Tempo) when you
+       have several services.
+
+    Grow the stack when a real need appears, not before.
+  concept: observability-tools
+review_questions:
+  - prompt: "Which pair is the classic starting stack for metrics and dashboards?"
+    kind: multiple_choice
+    options:
+      - "Loki + Kibana"
+      - "Prometheus + Grafana"
+      - "Jaeger + Tempo"
+      - "Fluentd + Cortex"
+    answer: "**Prometheus + Grafana**. Prometheus stores the numbers; Grafana draws the dashboards."
+    concept: observability-tools
+  - prompt: "Which tools are LOG shippers (agents that read logs from the node and send them to a store)?"
+    kind: recall
+    answer: "**Fluent Bit** and **Fluentd**. They run as a DaemonSet on every node."
+    concept: observability-tools
+  - prompt: "You have a single-service app on `kind`. Which is enough for now?"
+    kind: scenario
+    answer: "`kubectl logs` + metrics-server for `kubectl top`. Add Prometheus + Grafana when the app grows or you need HPA history."
+    concept: observability-tools
+  - prompt: "True or false: OpenTelemetry stores your traces."
+    kind: recall
+    answer: "False. OTel produces and forwards traces. Store them in Jaeger, Tempo, or a SaaS backend."
+    concept: observability-tools
+common_mistakes:
+  - mistake: "Installing every tool on day one."
+    fix: "Start small: `kubectl logs`, metrics-server, maybe Prometheus. Add tools when a real problem appears."
+  - mistake: "Picking Datadog or New Relic without checking the bill."
+    fix: "SaaS is easy but can be expensive at scale. Check pricing per host and per GB."
+summary: |
+  Logs, metrics, and traces have their own tools. A common
+  starting stack is Prometheus + Grafana + Loki (Grafana LGTM
+  covers all three). Add OpenTelemetry + Jaeger for tracing when
+  you have several services. Do not install more than you need.
+spaced_hooks:
+  - concept: observability-tools
+    when: next
+  - concept: logs
+    when: "5-7"
+  - concept: metrics
+    when: capstone
 cheat: |
   ### Observability tools
   - **Logs:** Loki, Elasticsearch+Kibana, Fluent Bit / Fluentd (agents).

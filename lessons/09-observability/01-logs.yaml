@@ -3,6 +3,11 @@ title: "Logs"
 module: observability
 order: 1
 estimated_minutes: 12
+learning_goal: "Read, follow, and inspect container logs, including logs from a crashed previous container."
+prerequisites:
+  - pods
+  - deployments
+  - containers
 intro: |
   # Logs
 
@@ -30,6 +35,19 @@ intro: |
   - `--all-containers` — logs from every container in the Pod.
   - `--timestamps` — add a timestamp to each line.
 
+warm_up:
+  - prompt: "What is a Pod? (one sentence)"
+    answer: "The smallest unit in Kubernetes. It runs one (or more) containers that share IP and volumes."
+    kind: recall
+    concept: pods
+  - prompt: "What does a Deployment give you that a bare Pod does not?"
+    answer: "A Deployment keeps N Pods alive. If a Pod dies, the Deployment creates a new one. A bare Pod is gone once deleted."
+    kind: recall
+    concept: deployments
+  - prompt: "Which command shows you the containers running in a Pod?"
+    answer: "`kubectl describe pod NAME` (or `kubectl get pod NAME -o yaml`). The `spec.containers` list shows them."
+    kind: recall
+    concept: containers
 task: |
   **Your goal:** produce and read logs on purpose.
 
@@ -60,6 +78,75 @@ hint: |
   - After a Pod restart, `--previous` reads the OLD container:
     `kubectl logs <pod-name> --previous`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You had a Pod that kept crashing. You want to see WHY it crashed.
+    You run:
+    ```
+    kubectl logs my-pod
+    ```
+    Output:
+    ```
+    (empty)
+    ```
+    But you know the app printed an error before it died.
+    The Pod restarted since then.
+  question: "Where did the old logs go, and how do you read them?"
+  diagnosis: |
+    `kubectl logs my-pod` shows logs from the **current** running
+    container. When the Pod restarts, the old container's logs are
+    still on the node, but you must ask for them with `--previous`:
+
+    ```
+    kubectl logs my-pod --previous
+    ```
+
+    If the Pod is fully deleted (not just restarted), the logs are
+    gone. To keep them long-term, ship logs to a log store (Loki,
+    Elasticsearch, ...).
+  concept: logs
+review_questions:
+  - prompt: "Which flag streams new log lines as the container writes them?"
+    kind: multiple_choice
+    options:
+      - "--follow (short: -f)"
+      - "--tail"
+      - "--previous"
+      - "--stream"
+    answer: "`--follow` (short: `-f`). Ctrl+C stops the stream."
+    concept: logs
+  - prompt: "Your Pod has two containers, `web` and `sidecar`. `kubectl logs my-pod` prints an error about `a container name must be specified`. What is wrong and how do you fix it?"
+    kind: debug
+    answer: "kubectl does not know which container's logs you want. Pass `-c web` (or `-c sidecar`), or use `--all-containers` to get logs from both."
+    concept: logs
+  - prompt: "You want to see logs from the last 5 minutes of a Deployment named `api`. Write the command."
+    kind: scenario
+    answer: "`kubectl logs deploy/api --since=5m` (kubectl picks one Pod behind the Deployment)."
+    concept: logs
+  - prompt: "True or false: `kubectl logs` reads logs from the Kubernetes control plane."
+    kind: recall
+    answer: "False. It reads from the container's stdout/stderr, stored on the node where the Pod runs."
+    concept: logs
+common_mistakes:
+  - mistake: "Expecting `kubectl logs` to show logs from a Pod that was fully deleted."
+    fix: "Once a Pod is gone from the cluster, its logs are gone too. Ship logs to a log store (Loki, Elasticsearch, ...) to keep them."
+  - mistake: "Running `kubectl logs deploy/NAME -f` and expecting logs from ALL Pods behind the Deployment."
+    fix: "kubectl picks ONE Pod. Use `kubectl logs -l app=NAME --all-containers=true -f` or a tool like `stern` to follow many Pods at once."
+  - mistake: "Forgetting `--previous` after a crash and thinking there are no error logs."
+    fix: "Always try `kubectl logs POD --previous` right after a `CrashLoopBackOff` — the death message is there."
+summary: |
+  `kubectl logs` reads what a container wrote to stdout/stderr.
+  Use `-f` to stream, `--previous` after a crash, and `-c` for
+  multi-container Pods. Logs on the node vanish when the Pod is
+  deleted — a real cluster ships logs to Loki, Elasticsearch, or
+  a SaaS.
+spaced_hooks:
+  - concept: logs
+    when: next
+  - concept: logs
+    when: "5-7"
+  - concept: logs
+    when: capstone
 cheat: |
   ### Logs
   Targets: `POD_NAME`, `deploy/NAME`, `job/NAME`.

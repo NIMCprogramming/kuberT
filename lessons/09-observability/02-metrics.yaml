@@ -3,6 +3,11 @@ title: "Metrics"
 module: observability
 order: 2
 estimated_minutes: 8
+learning_goal: "Explain what metrics are and name the tools that collect them in Kubernetes."
+prerequisites:
+  - pods
+  - requests-limits
+  - logs
 intro: |
   # Metrics
 
@@ -26,8 +31,89 @@ intro: |
 
   This lesson is for reading. To try `kubectl top pod` on `kind`,
   install metrics-server later.
+warm_up:
+  - prompt: "What does `resources.requests.cpu` mean on a container?"
+    answer: "The amount of CPU the container asks for. The scheduler uses it to pick a node. It is a floor, not a limit."
+    kind: recall
+    concept: requests-limits
+  - prompt: "What is the difference between a log line and a metric?"
+    answer: "A log line is a text event at one point in time. A metric is a number measured over time (and often labelled)."
+    kind: recall
+    concept: logs
+  - prompt: "Which `kubectl` command shows a Pod's current status?"
+    answer: "`kubectl get pod NAME` (short view) or `kubectl describe pod NAME` (details, events)."
+    kind: recall
+    concept: pods
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    You installed HPA (Horizontal Pod Autoscaler) but it does
+    nothing. `kubectl get hpa` shows:
+    ```
+    NAME   REFERENCE       TARGETS         MINPODS   MAXPODS   REPLICAS
+    web    Deployment/web  <unknown>/50%   1         5         1
+    ```
+    `kubectl top pod` returns:
+    ```
+    error: Metrics API not available
+    ```
+  question: "Why does HPA say <unknown>, and what must you install?"
+  diagnosis: |
+    HPA reads CPU/memory numbers from the **Metrics API**. On a
+    fresh cluster (and on `kind`), there is no Metrics API until
+    you install **metrics-server**.
+
+    Fix:
+    ```
+    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+    ```
+
+    After a minute, `kubectl top pod` works and HPA sees real
+    numbers.
+  concept: metrics
+review_questions:
+  - prompt: "Which tool lets you run `kubectl top pod` and powers HPA on a small cluster?"
+    kind: multiple_choice
+    options:
+      - "Prometheus"
+      - "metrics-server"
+      - "Grafana"
+      - "Jaeger"
+    answer: "`metrics-server`. It stores only recent numbers in memory."
+    concept: metrics
+  - prompt: "How does Prometheus get metrics from an app?"
+    kind: recall
+    answer: "It **pulls** them: it opens an HTTP request to the app's `/metrics` endpoint on a schedule (scrape interval)."
+    concept: metrics
+  - prompt: "You want a dashboard showing CPU per Pod over the last 24 hours. Which tool pair is the classic choice?"
+    kind: scenario
+    answer: "Prometheus (to store the numbers) + Grafana (to draw the dashboard)."
+    concept: metrics
+  - prompt: "True or false: metrics-server keeps a long history of CPU and memory."
+    kind: recall
+    answer: "False. metrics-server keeps only very recent numbers in memory. For history, use Prometheus."
+    concept: metrics
+common_mistakes:
+  - mistake: "Trying `kubectl top pod` on a fresh cluster and thinking Kubernetes is broken."
+    fix: "Install metrics-server first. On `kind` you also need `--kubelet-insecure-tls` in its args."
+  - mistake: "Believing metrics-server can replace Prometheus."
+    fix: "metrics-server is small (in-memory, current values, for HPA). Prometheus stores history and lets you query it with PromQL."
+summary: |
+  Metrics are numbers over time. metrics-server is the small
+  in-cluster add-on that powers `kubectl top` and HPA. Prometheus
+  + Grafana is the classic pair for real dashboards and alerts.
+  You will meet metrics again when we build the Horizontal Pod
+  Autoscaler in module 12.
+spaced_hooks:
+  - concept: metrics
+    when: next
+  - concept: metrics
+    when: "2-3"
+  - concept: metrics
+    when: "5-7"
+  - concept: metrics
+    when: capstone
 cheat: |
   ### Metrics
   - **metrics-server** — light, in-cluster, powers `kubectl top` and HPA.

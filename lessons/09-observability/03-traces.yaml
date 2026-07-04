@@ -3,6 +3,11 @@ title: "Tracing"
 module: observability
 order: 3
 estimated_minutes: 6
+learning_goal: "Explain what a trace and a span are, and when to add tracing to a system."
+prerequisites:
+  - logs
+  - metrics
+  - services
 intro: |
   # Tracing
 
@@ -12,7 +17,7 @@ intro: |
   A trace follows one request through many services. Example:
 
   ```
-  user → frontend → cart → payment → db
+  user -> frontend -> cart -> payment -> db
   ```
 
   Each step is called a **span**. Together they form one trace.
@@ -26,8 +31,76 @@ intro: |
     them.
 
   Tracing is a big topic. This lesson only introduces the idea.
+warm_up:
+  - prompt: "What kind of data does `kubectl logs` show?"
+    answer: "Text lines the container wrote to stdout or stderr."
+    kind: recall
+    concept: logs
+  - prompt: "What is a metric, in one sentence?"
+    answer: "A number measured over time, often with labels (like Pod name or route)."
+    kind: recall
+    concept: metrics
+  - prompt: "How does one Pod call another Pod inside the cluster?"
+    answer: "By the DNS name of a Service, like `http://cart.default.svc.cluster.local`. The Service load-balances to the Pods."
+    kind: recall
+    concept: services
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A user reports: *"the checkout page takes 4 seconds"*.
+    You look at logs — no errors. You look at metrics — CPU is
+    low, memory is low. Every service says it is fine.
+  question: "Why can logs + metrics fail here, and what would tracing show?"
+  diagnosis: |
+    Logs and metrics show each service in isolation. But the slow
+    request touches many services: `frontend -> cart -> payment
+    -> db`. If `payment` waits 3.5 seconds for `db`, no single
+    service looks broken.
+
+    A trace connects all spans of one request. In the timeline you
+    see the 3.5-second gap and know exactly where to look. Add
+    OpenTelemetry to the services and ship traces to Jaeger or
+    Tempo.
+  concept: traces
+review_questions:
+  - prompt: "In tracing, what is a span?"
+    kind: multiple_choice
+    options:
+      - "A container's log line"
+      - "One step of one request, with a name and a duration"
+      - "A Prometheus metric with labels"
+      - "A Kubernetes event"
+    answer: "One step of one request, with a name and a duration. Many spans build one trace."
+    concept: traces
+  - prompt: "Which project is the standard SDK / protocol for producing traces from your app?"
+    kind: recall
+    answer: "**OpenTelemetry** (OTel). It also handles metrics and logs in newer versions."
+    concept: traces
+  - prompt: "Your app is a single monolith with no other services. Would you add tracing first, or logs and metrics first?"
+    kind: scenario
+    answer: "Logs and metrics first. Tracing pays off once you have many services talking to each other."
+    concept: traces
+  - prompt: "True or false: a trace and a log line are the same thing."
+    kind: recall
+    answer: "False. A log line is one event; a trace is a timeline of many spans across services for one request."
+    concept: traces
+common_mistakes:
+  - mistake: "Adding tracing before logs and metrics."
+    fix: "Start with logs (fast to add) and metrics (needed for HPA). Add tracing when you have several services and need to find slow steps."
+  - mistake: "Thinking OpenTelemetry stores your traces."
+    fix: "OTel only produces and forwards traces. You still need a backend like Jaeger, Tempo, or a SaaS to store and search them."
+summary: |
+  Tracing follows one request across many services. Each step is
+  a span; together they form a trace and a timeline. Use
+  OpenTelemetry in your code and Jaeger or Tempo to view traces.
+  Add tracing after logs and metrics, when you have several
+  services.
+spaced_hooks:
+  - concept: traces
+    when: next
+  - concept: traces
+    when: capstone
 cheat: |
   ### Tracing
   - A **trace** follows one request across many services.
