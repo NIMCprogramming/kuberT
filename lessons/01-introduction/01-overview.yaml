@@ -3,6 +3,8 @@ title: "What is Kubernetes?"
 module: introduction
 order: 1
 estimated_minutes: 5
+learning_goal: "Explain in one sentence what Kubernetes does and why teams use it."
+prerequisites: []
 intro: |
   # What is Kubernetes?
 
@@ -29,5 +31,49 @@ cheat: |
   - Nickname: **K8s** (K + 8 letters + s).
   - Keeps apps alive, scales them, works the same on laptop or cloud.
   - You describe **what** you want in YAML; K8s figures out **how**.
+warm_up:
+  - prompt: "What is an app? (one short sentence)"
+    answer: "An app is a program that does a job for users, like a web site, a chat, or a database."
+    kind: recall
+    concept: general-computing
+review_questions:
+  - prompt: "What is the short name for Kubernetes?"
+    kind: recall
+    answer: "K8s. The 8 stands for the eight letters between K and s."
+    concept: kubernetes-basics
+  - prompt: "Which of these is NOT a job Kubernetes does?"
+    kind: multiple_choice
+    options:
+      - "Restart a container if it crashes"
+      - "Run many containers on many computers"
+      - "Write your app code for you"
+      - "Add more copies when there is more traffic"
+    answer: "Write your app code for you. Kubernetes runs code; it does not write it."
+    concept: kubernetes-basics
+  - prompt: "Your team runs one server. If that server dies, users see errors for hours. How can Kubernetes help?"
+    kind: scenario
+    answer: "Kubernetes runs your app on many computers. If one dies, it moves the app to another one, and users see almost no downtime."
+    concept: kubernetes-basics
+  - prompt: "True or false: the same Kubernetes YAML file can run on your laptop and in the cloud."
+    kind: recall
+    answer: "True. That is one big reason people use it."
+    concept: kubernetes-basics
+common_mistakes:
+  - mistake: "Thinking Kubernetes is a programming language or a web server."
+    fix: "Kubernetes is an orchestrator. It runs containers that hold your app. You still write the app in your own language."
+  - mistake: "Thinking Kubernetes only works in big clouds."
+    fix: "It runs on a laptop too. Tools like Kind and Minikube start a small cluster on one machine."
+summary: |
+  Kubernetes (K8s) runs apps packed in containers across many
+  computers. It keeps them alive, scales them, and works the same
+  way on a laptop and in the cloud. You describe what you want;
+  Kubernetes figures out how.
+spaced_hooks:
+  - concept: kubernetes-basics
+    when: next
+  - concept: kubernetes-basics
+    when: "2-3"
+  - concept: kubernetes-basics
+    when: capstone
 check:
   type: manual

@@ -3,6 +3,9 @@ title: "Key Kubernetes words"
 module: introduction
 order: 3
 estimated_minutes: 6
+learning_goal: "Recognise the words cluster, node, Pod, container, control plane, kubectl, and YAML when you hear them."
+prerequisites:
+  - kubernetes-basics
 intro: |
   # Key words
 
@@ -35,5 +38,59 @@ cheat: |
   - **Control plane** — the "brain" (API server, scheduler, ...).
   - **kubectl** — the CLI you use to talk to the cluster.
   - **YAML** — what you write; K8s does the rest.
+warm_up:
+  - prompt: "Name one of the three main reasons teams use Kubernetes."
+    answer: "Self-healing, or auto-scaling, or portability (same YAML on any machine)."
+    kind: recall
+    concept: kubernetes-basics
+  - prompt: "What is the short name for Kubernetes?"
+    answer: "K8s."
+    kind: recall
+    concept: kubernetes-basics
+review_questions:
+  - prompt: "Which word means 'one computer inside the cluster'?"
+    kind: multiple_choice
+    options:
+      - "Pod"
+      - "Node"
+      - "Container"
+      - "Cluster"
+    answer: "Node. A cluster has many nodes."
+    concept: nodes
+  - prompt: "What is the smallest unit you can run on Kubernetes?"
+    kind: recall
+    answer: "A Pod. A Pod wraps one (or a few) containers."
+    concept: pods
+  - prompt: "What is the difference between a container and a Pod?"
+    kind: recall
+    answer: "A container holds your app. A Pod is the Kubernetes wrapper around one or more containers. Kubernetes schedules Pods, not raw containers."
+    concept: pods
+  - prompt: "You want to tell Kubernetes 'I want 3 copies of my app'. Do you tell it what or how?"
+    kind: scenario
+    answer: "You tell it WHAT you want (3 copies) in YAML. Kubernetes figures out HOW to make it happen. This is called declarative."
+    concept: yaml-apply
+  - prompt: "Which tool do you type on the terminal to talk to the cluster?"
+    kind: recall
+    answer: "kubectl."
+    concept: kubectl-basics
+common_mistakes:
+  - mistake: "Mixing up Pod and container. People say 'my container crashed' when they mean the Pod."
+    fix: "A container is inside a Pod. A Pod may have 1 container (usually) or more. Use the right word so kubectl commands are clear."
+  - mistake: "Thinking a cluster is one big computer."
+    fix: "A cluster is many computers (nodes) that act as one. Kubernetes hides that from you, but the nodes are real machines."
+summary: |
+  A cluster is a group of nodes. Each node runs Pods. Each Pod
+  wraps containers that hold your app. The control plane is the
+  brain that plans Pods. You use kubectl and YAML files to tell
+  the cluster what you want.
+spaced_hooks:
+  - concept: pods
+    when: "5-7"
+  - concept: nodes
+    when: "2-3"
+  - concept: kubectl-basics
+    when: "2-3"
+  - concept: yaml-apply
+    when: "2-3"
 check:
   type: manual

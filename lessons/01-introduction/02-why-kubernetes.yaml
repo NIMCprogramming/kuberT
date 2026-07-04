@@ -3,6 +3,9 @@ title: "Why people use Kubernetes"
 module: introduction
 order: 2
 estimated_minutes: 5
+learning_goal: "Name the three main reasons teams pick Kubernetes over hand-written scripts."
+prerequisites:
+  - kubernetes-basics
 intro: |
   # Why Kubernetes?
 
@@ -30,5 +33,53 @@ cheat: |
   - **Auto-scaling** — adds Pods on load, removes them when idle.
   - **Portable** — same YAML on any cloud, on-prem, or laptop.
   - Replaces hand-written scripts for restart/deploy/rollback.
+warm_up:
+  - prompt: "What is Kubernetes, in one short sentence?"
+    answer: "A tool that runs apps in containers on many computers as one system."
+    kind: recall
+    concept: kubernetes-basics
+  - prompt: "What is the short name for Kubernetes?"
+    answer: "K8s."
+    kind: recall
+    concept: kubernetes-basics
+review_questions:
+  - prompt: "Which of these is NOT one of the three main reasons to use Kubernetes?"
+    kind: multiple_choice
+    options:
+      - "It keeps apps alive"
+      - "It can grow and shrink"
+      - "It works the same everywhere"
+      - "It writes the app for you"
+    answer: "It writes the app for you. You still write your own code."
+    concept: kubernetes-basics
+  - prompt: "Your web shop gets 10x more traffic on Friday nights. How does Kubernetes help?"
+    kind: scenario
+    answer: "It adds more copies (Pods) of your app on Friday to handle the traffic, and removes them later to save money. This is called auto-scaling."
+    concept: kubernetes-basics
+  - prompt: "One node in your cluster crashes at 3 a.m. What does Kubernetes do without you?"
+    kind: scenario
+    answer: "It moves the app to a healthy node and restarts the Pods there. This is called self-healing."
+    concept: kubernetes-basics
+  - prompt: "True or false: the same YAML file works on your laptop and in the cloud."
+    kind: recall
+    answer: "True. Portability is one of the three main reasons to use Kubernetes."
+    concept: kubernetes-basics
+common_mistakes:
+  - mistake: "Thinking self-healing means Kubernetes fixes bugs in your code."
+    fix: "It only restarts a crashed container. If your code has a bug, it will crash again. You still fix bugs yourself."
+  - mistake: "Thinking auto-scaling is free and automatic from day one."
+    fix: "You must set limits and rules (like HPA later). Without them, Kubernetes does not add or remove copies."
+summary: |
+  Kubernetes helps teams in three ways: it keeps apps alive
+  (self-healing), it grows and shrinks with traffic (auto-scaling),
+  and it works the same on any machine or cloud (portable). It
+  replaces the shell scripts old teams wrote by hand.
+spaced_hooks:
+  - concept: kubernetes-basics
+    when: next
+  - concept: kubernetes-basics
+    when: "2-3"
+  - concept: kubernetes-basics
+    when: capstone
 check:
   type: manual

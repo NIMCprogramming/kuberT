@@ -3,6 +3,9 @@ title: "Other tools like Kubernetes"
 module: introduction
 order: 4
 estimated_minutes: 5
+learning_goal: "Name at least two other container orchestrators and one reason Kubernetes usually wins."
+prerequisites:
+  - kubernetes-basics
 intro: |
   # Kubernetes is not the only tool
 
@@ -33,5 +36,56 @@ cheat: |
   - **Cloud Foundry** — older, app-focused.
 
   K8s wins on ecosystem: works on every cloud, huge community, many add-ons (Helm, Prometheus, Istio).
+warm_up:
+  - prompt: "What does Kubernetes do, in one sentence?"
+    answer: "It runs containers on many computers as one system, and keeps them alive."
+    kind: recall
+    concept: kubernetes-basics
+  - prompt: "Name one of the three big reasons teams pick Kubernetes."
+    answer: "Self-healing, auto-scaling, or portability."
+    kind: recall
+    concept: kubernetes-basics
+  - prompt: "Which word means the brain of the cluster?"
+    answer: "Control plane."
+    kind: recall
+    concept: kubernetes-basics
+review_questions:
+  - prompt: "Which of these only works on AWS?"
+    kind: multiple_choice
+    options:
+      - "Kubernetes"
+      - "Docker Swarm"
+      - "Amazon ECS"
+      - "Nomad"
+    answer: "Amazon ECS. It is Amazon's tool and only runs on AWS."
+    concept: orchestrators
+  - prompt: "Which tool comes from HashiCorp and can also run VMs and plain programs, not only containers?"
+    kind: recall
+    answer: "Nomad."
+    concept: orchestrators
+  - prompt: "A teammate says: 'Docker Swarm has more features than Kubernetes.' Are they right?"
+    kind: scenario
+    answer: "No. Docker Swarm is simpler and easier to start, but it has fewer features than Kubernetes."
+    concept: orchestrators
+  - prompt: "Give one reason a team might still pick Kubernetes over a simpler tool."
+    kind: recall
+    answer: "Big community, works on every cloud, many add-ons (Helm, Prometheus, Istio), or same YAML anywhere."
+    concept: orchestrators
+common_mistakes:
+  - mistake: "Thinking Docker and Kubernetes are the same thing."
+    fix: "Docker builds and runs single containers. Kubernetes runs many containers on many machines. They work together but are not the same."
+  - mistake: "Picking Kubernetes for a tiny one-server side project."
+    fix: "Kubernetes is heavy to learn. For a small side project, a simpler tool (Docker Compose, Docker Swarm) may be a better fit."
+summary: |
+  Kubernetes has rivals: Docker Swarm (simple), Nomad (flexible),
+  Amazon ECS (AWS-only), and Cloud Foundry (old, app-focused). But
+  Kubernetes wins most jobs because of its huge community, its
+  cloud portability, and the many add-on tools around it. The cost
+  is that it is harder to learn.
+spaced_hooks:
+  - concept: kubernetes-basics
+    when: next
+  - concept: orchestrators
+    when: capstone
 check:
   type: manual
