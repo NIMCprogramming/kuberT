@@ -3,6 +3,10 @@ title: "Your first kubectl commands"
 module: setting-up
 order: 2
 estimated_minutes: 12
+learning_goal: "Use kubectl verbs and flags to list nodes and Pods across namespaces."
+prerequisites:
+  - kind-local-cluster
+  - kubectl-basics
 intro: |
   # kubectl
 
@@ -85,6 +89,82 @@ cheat: |
   - `--dry-run=client -o yaml`  — print YAML without applying
 
   `kubectl api-resources` lists everything.
+warm_up:
+  - prompt: "What does 'Kind' stand for?"
+    answer: "Kubernetes IN Docker."
+    kind: recall
+    concept: kind-local-cluster
+  - prompt: "Which command shows the current kubectl context?"
+    answer: "`kubectl config current-context`."
+    kind: recall
+    concept: kubectl-basics
+  - prompt: "What is a 'node' in a cluster?"
+    answer: "One computer inside the cluster. It runs Pods."
+    kind: recall
+    concept: nodes
+troubleshooting:
+  scenario: |
+    You just deployed an app into namespace `web`. Then you check:
+    ```
+    $ kubectl get pods
+    No resources found in default namespace.
+    ```
+    But you know Pods should be there.
+  question: "What is going on, and how do you see the Pods?"
+  diagnosis: |
+    `kubectl` uses the `default` namespace when you do not pass
+    `-n`. Your Pods live in `web`, so `default` is empty.
+
+    Two fixes:
+    - Ask by namespace: `kubectl get pods -n web`
+    - Or see all namespaces at once: `kubectl get pods -A`
+
+    Tip: to avoid this all the time, set the default namespace of
+    your context: `kubectl config set-context --current --namespace=web`.
+  concept: kubectl-basics
+review_questions:
+  - prompt: "The shape of every kubectl command is:"
+    kind: multiple_choice
+    options:
+      - "kubectl <resource> <verb> [flags]"
+      - "kubectl <verb> <resource> [name] [flags]"
+      - "kubectl <name> <verb> <resource>"
+      - "kubectl <flags> <verb>"
+    answer: "`kubectl <verb> <resource> [name] [flags]`. Verb first, then resource, then optional name and flags."
+    concept: kubectl-basics
+  - prompt: "Which flag shows Pods in ALL namespaces?"
+    kind: recall
+    answer: "`-A` (or `--all-namespaces`)."
+    concept: kubectl-basics
+  - prompt: "You want richer info on nodes: internal IP, OS, and container runtime. Which flag?"
+    kind: scenario
+    answer: "`-o wide`. So: `kubectl get nodes -o wide`."
+    concept: kubectl-basics
+  - prompt: "Short name for `deployments`?"
+    kind: recall
+    answer: "`deploy`. (`kubectl get deploy` works.)"
+    concept: kubectl-basics
+  - prompt: "You want to see every kind of resource kubectl knows about. Which command?"
+    kind: recall
+    answer: "`kubectl api-resources`."
+    concept: kubectl-basics
+common_mistakes:
+  - mistake: "Forgetting `-n <namespace>` and thinking Pods are gone."
+    fix: "Add `-n <namespace>` or `-A`. Or set the current namespace: `kubectl config set-context --current --namespace=<ns>`."
+  - mistake: "Talking to the wrong cluster because the context is wrong."
+    fix: "Run `kubectl config current-context` before big changes. Switch with `kubectl config use-context <name>`."
+summary: |
+  kubectl talks to Kubernetes with the shape verb + resource +
+  name + flags. Learn `get`, `describe`, `apply`, `delete`, `logs`,
+  `exec`. Learn `-n`, `-A`, and `-o wide`. Every hands-on lesson
+  from here uses kubectl.
+spaced_hooks:
+  - concept: kubectl-basics
+    when: next
+  - concept: kubectl-basics
+    when: "2-3"
+  - concept: kubectl-basics
+    when: capstone
 check:
   type: command
   cmd: "kubectl get nodes --no-headers"

@@ -3,6 +3,10 @@ title: "A local cluster with Kind"
 module: setting-up
 order: 1
 estimated_minutes: 10
+learning_goal: "Prove a local Kind cluster is running and identify the kubectl context that points to it."
+prerequisites:
+  - containers
+  - docker-basics
 intro: |
   # A local cluster with Kind
 
@@ -45,6 +49,77 @@ cheat: |
   - `kind delete cluster --name NAME`  — remove.
   - `kubectl cluster-info`  — is the cluster reachable?
   - `kubectl config current-context`  — which cluster kubectl is pointing at.
+warm_up:
+  - prompt: "What is a container, in one sentence?"
+    answer: "A box with the app, its libraries, and its settings; runs the same on any host with a runtime."
+    kind: recall
+    concept: containers
+  - prompt: "Does Kubernetes need Docker installed on the nodes to run Pods?"
+    answer: "No. It needs a container runtime like containerd. Docker is one tool to BUILD images."
+    kind: recall
+    concept: docker-basics
+troubleshooting:
+  scenario: |
+    You want to check the cluster. You run:
+    ```
+    $ kubectl cluster-info
+    E0704 12:00:00  connection refused
+    The connection to the server 127.0.0.1:43219 was refused - did you specify the right host or port?
+    ```
+    But `docker ps` shows no container with `control-plane` in the
+    name.
+  question: "What is wrong, and how do you get the cluster back?"
+  diagnosis: |
+    The Kind cluster's node container is not running, so the API
+    server on that port is unreachable. `kubectl` still remembers
+    the old context, so it tries the dead endpoint.
+
+    Fix:
+    - Check clusters: `kind get clusters`
+    - If missing, create it again: `kind create cluster --name kubert`
+      (or from the main menu, "Check tools / create cluster").
+    - If a stale kubeconfig is the problem: `kubectl config get-contexts`
+      and switch with `kubectl config use-context kind-kubert`.
+  concept: kind-local-cluster
+review_questions:
+  - prompt: "What does 'Kind' stand for?"
+    kind: recall
+    answer: "Kubernetes IN Docker. The whole cluster lives inside one (or more) Docker containers."
+    concept: kind-local-cluster
+  - prompt: "Which command lists your local Kind clusters?"
+    kind: multiple_choice
+    options:
+      - "kubectl get clusters"
+      - "kind list"
+      - "kind get clusters"
+      - "docker cluster ls"
+    answer: "kind get clusters."
+    concept: kind-local-cluster
+  - prompt: "You have two Kind clusters and kubectl talks to the wrong one. How do you check which context is active and how do you switch?"
+    kind: scenario
+    answer: "Check with `kubectl config current-context`. List with `kubectl config get-contexts`. Switch with `kubectl config use-context <name>`."
+    concept: kubectl-basics
+  - prompt: "True or false: Kind is a great choice to run production traffic for many users."
+    kind: recall
+    answer: "False. Kind is for learning and CI. Production uses managed clusters (EKS, GKE, AKS) or self-hosted clusters."
+    concept: kind-local-cluster
+common_mistakes:
+  - mistake: "Killing Docker while a Kind cluster runs and then wondering why kubectl fails."
+    fix: "Kind's node lives inside a Docker container. If Docker stops, the API server dies with it. Start Docker, then check `kind get clusters`."
+  - mistake: "Confusing the Kind CLI with kubectl (`kind get pods` — does not exist)."
+    fix: "`kind` only manages clusters (create/delete/list). Use `kubectl` for things inside the cluster."
+summary: |
+  Kind runs a full Kubernetes cluster inside Docker containers.
+  You use `kind` to create and list clusters, and `kubectl` to
+  talk to what runs inside. A kubectl 'context' is the link
+  between your commands and one specific cluster.
+spaced_hooks:
+  - concept: kind-local-cluster
+    when: next
+  - concept: kind-local-cluster
+    when: "2-3"
+  - concept: kubectl-basics
+    when: next
 check:
   type: command
   cmd: "kubectl cluster-info"

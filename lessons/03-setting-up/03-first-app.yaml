@@ -3,6 +3,11 @@ title: "Your first app on the cluster"
 module: setting-up
 order: 3
 estimated_minutes: 12
+learning_goal: "Run, inspect, and clean up a single Pod using imperative kubectl commands."
+prerequisites:
+  - containers
+  - docker-basics
+  - kubectl-basics
 intro: |
   # Your first app
 
@@ -49,6 +54,85 @@ cheat: |
   - `kubectl logs NAME`  — stdout/stderr.
   - `kubectl exec -it NAME -- sh`  — shell inside.
   - `kubectl delete pod NAME`  — remove.
+warm_up:
+  - prompt: "What does a container hold inside it?"
+    answer: "The app, its libraries, and its settings."
+    kind: recall
+    concept: containers
+  - prompt: "Which command lists Pods in ALL namespaces?"
+    answer: "`kubectl get pods -A`."
+    kind: recall
+    concept: kubectl-basics
+  - prompt: "You built a new Docker image but the cluster runs the old code. What is one likely cause?"
+    answer: "You did not push the new image (or you reused the same tag). Push with a new tag and use it in the Pod spec."
+    kind: recall
+    concept: docker-basics
+troubleshooting:
+  scenario: |
+    You just ran:
+    ```
+    kubectl run hello-web --image=nignx
+    ```
+    And you see:
+    ```
+    NAME        READY   STATUS             RESTARTS   AGE
+    hello-web   0/1     ErrImagePull       0          20s
+    ```
+  question: "What is wrong, and how do you find and fix it?"
+  diagnosis: |
+    The image name is misspelled: `nignx` does not exist on Docker
+    Hub. The node cannot pull it, so the Pod is stuck in
+    `ErrImagePull` (which becomes `ImagePullBackOff` after retries).
+
+    How to see the exact error:
+    - `kubectl describe pod hello-web` — the Events section shows
+      the pull error and the image name.
+
+    Fix:
+    - Delete the Pod: `kubectl delete pod hello-web`
+    - Re-run with the correct image: `kubectl run hello-web --image=nginx`
+  concept: docker-basics
+review_questions:
+  - prompt: "Which command creates a Pod with `kubectl` in one line?"
+    kind: multiple_choice
+    options:
+      - "kubectl apply pod NAME --image=IMAGE"
+      - "kubectl create pod NAME --image=IMAGE"
+      - "kubectl run NAME --image=IMAGE"
+      - "kubectl start NAME --image=IMAGE"
+    answer: "`kubectl run NAME --image=IMAGE`."
+    concept: pods
+  - prompt: "What does the `--` mean in `kubectl exec -it POD -- sh`?"
+    kind: recall
+    answer: "It splits kubectl flags from the command you want to run inside the container. Everything after `--` runs in the container."
+    concept: kubectl-basics
+  - prompt: "You run `kubectl logs hello-web` and see nothing. The Pod is `Running`. What could it mean?"
+    kind: debug
+    answer: "The app writes to stdout/stderr but has printed nothing yet, or it writes to a file instead of stdout. Also check you are in the right namespace, and use `-c <name>` if the Pod has more than one container."
+    concept: kubectl-basics
+  - prompt: "You are done with `hello-web`. Which command removes it?"
+    kind: recall
+    answer: "`kubectl delete pod hello-web`."
+    concept: kubectl-basics
+common_mistakes:
+  - mistake: "Leaving old Pods running after a lesson. They eat memory and confuse the next lesson."
+    fix: "Always end with `kubectl delete pod <name>` (or `kubectl delete -f file.yaml`)."
+  - mistake: "Using a plain `kubectl run` in production."
+    fix: "For real workloads use a Deployment (module 04). A bare Pod is fine for quick tests only."
+  - mistake: "Typing `kubectl exec POD sh` without `-it`. You get 'the input device is not a TTY'."
+    fix: "Add `-it` to attach a terminal: `kubectl exec -it POD -- sh`."
+summary: |
+  You made your first Pod with `kubectl run`, watched its logs,
+  and opened a shell inside it. Bare Pods are fine for quick
+  tests. Real apps use Deployments, which you meet next in module
+  04.
+spaced_hooks:
+  - concept: kubectl-basics
+    when: next
+  - concept: pods
+    when: next
+  - concept: containers
+    when: "2-3"
 check:
   type: command
   cmd: "kubectl get pod hello-web -o jsonpath='{.status.phase}'"
