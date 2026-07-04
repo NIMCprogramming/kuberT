@@ -3,6 +3,9 @@ title: "Container vs virtual machine"
 module: containers
 order: 2
 estimated_minutes: 6
+learning_goal: "List two ways a container is different from a virtual machine and pick the right tool for a job."
+prerequisites:
+  - containers
 intro: |
   # Container vs virtual machine (VM)
 
@@ -40,5 +43,52 @@ cheat: |
   | isolation | very strong | weaker (still enough) |
 
   - VM = whole house. Container = one room in a shared house.
+warm_up:
+  - prompt: "What does a container pack inside it?"
+    answer: "Your app, the libraries it needs, and its settings."
+    kind: recall
+    concept: containers
+  - prompt: "Why do containers fix 'works on my machine'?"
+    answer: "Because the app and its libraries are inside the container, so it runs the same on any host with a runtime."
+    kind: recall
+    concept: containers
+review_questions:
+  - prompt: "Which of these is TRUE about containers vs VMs?"
+    kind: multiple_choice
+    options:
+      - "Containers boot in minutes; VMs boot in seconds"
+      - "Containers share the host kernel; VMs have their own kernel"
+      - "Containers use more disk than VMs"
+      - "VMs share the host kernel; containers do not"
+    answer: "Containers share the host kernel; VMs have their own kernel. This is why containers are smaller and faster."
+    concept: container-vs-vm
+  - prompt: "Which is stronger isolation: a container or a VM? Why does that matter for untrusted code?"
+    kind: recall
+    answer: "A VM. It has its own kernel, so a bug in the guest cannot reach the host as easily. For code you do not trust, VMs are safer."
+    concept: container-vs-vm
+  - prompt: "Your team must run 200 small services on one server, and they must start in a second. Should you pick VMs or containers?"
+    kind: scenario
+    answer: "Containers. They start fast (about a second), use megabytes of disk, and let you run many at once on one host."
+    concept: container-vs-vm
+  - prompt: "True or false: because a Pod runs containers, a Pod is basically a small VM."
+    kind: recall
+    answer: "False. A Pod wraps containers, and containers are not VMs. Pods share the host kernel."
+    concept: container-vs-vm
+common_mistakes:
+  - mistake: "Thinking Pods are small VMs because they feel isolated."
+    fix: "A Pod is a wrapper around containers. Containers share the host kernel. Pods do not boot a full OS."
+  - mistake: "Using a VM 'just to be safe' when a container is enough."
+    fix: "Use containers by default. Reach for a VM only for untrusted workloads or full-OS needs; you pay in slower boot and more disk."
+summary: |
+  Containers share the host kernel and start in about a second.
+  VMs have their own kernel and take much more disk and time. VMs
+  isolate more strongly; containers isolate enough for most apps.
+  Kubernetes picks containers so you can run many services on one
+  machine.
+spaced_hooks:
+  - concept: container-vs-vm
+    when: next
+  - concept: containers
+    when: "2-3"
 check:
   type: manual

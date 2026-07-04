@@ -3,6 +3,10 @@ title: "Docker and Kubernetes"
 module: containers
 order: 3
 estimated_minutes: 10
+learning_goal: "Check that Docker is running and explain the difference between building an image and running it in Kubernetes."
+prerequisites:
+  - containers
+  - container-vs-vm
 intro: |
   # Docker and Kubernetes
 
@@ -52,6 +56,79 @@ cheat: |
   - You can still BUILD images with Docker (or `podman`, `buildah`).
   - Common commands: `docker version`, `docker ps`, `docker images`, `docker build -t NAME .`, `docker push`.
   - `kind` uses `containerd` inside its node container.
+warm_up:
+  - prompt: "What does a container hold inside it?"
+    answer: "The app, its libraries, and its settings."
+    kind: recall
+    concept: containers
+  - prompt: "One short difference between a container and a VM?"
+    answer: "A container shares the host kernel; a VM has its own kernel and full OS."
+    kind: recall
+    concept: container-vs-vm
+troubleshooting:
+  scenario: |
+    You try to check Docker and see this:
+    ```
+    $ docker version
+    Client: Docker Engine - Community
+     Version:  24.0.7
+     ...
+    Cannot connect to the Docker daemon at unix:///var/run/docker.sock.
+    Is the docker daemon running?
+    ```
+  question: "What is wrong, and how do you fix it?"
+  diagnosis: |
+    The Docker **client** is installed and prints its own version.
+    But the **server (daemon)** is not running, so it cannot talk
+    to it. That is why the "Server" section is missing.
+
+    Fix on Ubuntu:
+    ```
+    sudo systemctl start docker
+    sudo systemctl enable docker   # start on boot
+    ```
+    Then run `docker version` again — you should now see a Server
+    section too.
+  concept: docker-basics
+review_questions:
+  - prompt: "Does Kubernetes need Docker installed to run Pods?"
+    kind: recall
+    answer: "No. Kubernetes uses a container runtime (containerd or CRI-O). You can still use Docker to build images, but the cluster itself does not need Docker."
+    concept: docker-basics
+  - prompt: "Which command shows the running containers on your host?"
+    kind: multiple_choice
+    options:
+      - "docker images"
+      - "docker ps"
+      - "docker build"
+      - "docker version"
+    answer: "docker ps. `docker images` lists local images, not running containers."
+    concept: docker-basics
+  - prompt: "You build an image with Docker on your laptop and push it to a registry. Can a Kubernetes cluster that runs containerd pull and run it?"
+    kind: scenario
+    answer: "Yes. The image format is the same (OCI). Any container runtime can pull and run it, no matter what tool built it."
+    concept: docker-basics
+  - prompt: "You changed your image and applied a new Deployment, but the cluster still runs the old code. What might have gone wrong?"
+    kind: debug
+    answer: "You forgot to push the new image to the registry (or you reused the same tag so nodes still use the cached version). Push the image with a new tag and update the Deployment to use it."
+    concept: docker-basics
+common_mistakes:
+  - mistake: "Editing the image locally but not pushing it to the registry. The cluster still pulls the old one."
+    fix: "After `docker build`, always `docker push`. Use a fresh tag (like a git commit hash) so nodes do not use a cached image."
+  - mistake: "Thinking Docker Desktop must be installed inside every Kubernetes node."
+    fix: "Nodes use their own runtime (containerd/CRI-O). Docker is only for building images on your dev machine."
+summary: |
+  Docker is a great tool to BUILD container images. Kubernetes
+  runs those images with a container runtime like containerd. You
+  do not need Docker installed on the cluster nodes. The image
+  format is shared, so any runtime can run any OCI image.
+spaced_hooks:
+  - concept: docker-basics
+    when: next
+  - concept: docker-basics
+    when: "2-3"
+  - concept: containers
+    when: "2-3"
 check:
   type: command
   cmd: "docker version --format '{{.Server.Version}}'"

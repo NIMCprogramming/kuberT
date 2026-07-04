@@ -3,6 +3,9 @@ title: "What is a container?"
 module: containers
 order: 1
 estimated_minutes: 6
+learning_goal: "Explain what a container packs and why it fixes the 'works on my machine' problem."
+prerequisites:
+  - kubernetes-basics
 intro: |
   # What is a container?
 
@@ -32,5 +35,53 @@ cheat: |
   - Same box runs the same anywhere Docker (or `containerd`) is installed.
   - Fixes *"works on my machine"*.
   - K8s runs **containers**, not VMs.
+warm_up:
+  - prompt: "What does Kubernetes do, in one sentence?"
+    answer: "It runs apps in containers on many computers as one system."
+    kind: recall
+    concept: kubernetes-basics
+  - prompt: "What is the smallest thing you run on Kubernetes: a container, a Pod, or a node?"
+    answer: "A Pod. The Pod wraps one or more containers."
+    kind: recall
+    concept: pods
+review_questions:
+  - prompt: "Which of these is NOT inside a container?"
+    kind: multiple_choice
+    options:
+      - "Your app code"
+      - "The libraries your app needs"
+      - "Environment settings"
+      - "The full computer hardware"
+    answer: "The full computer hardware. A container shares the host machine. It does not carry hardware."
+    concept: containers
+  - prompt: "Why do containers fix the 'works on my machine' problem?"
+    kind: recall
+    answer: "Because the app, its libraries, and its settings all live inside the container. The host only needs a container runtime. The app runs the same way anywhere."
+    concept: containers
+  - prompt: "You give a friend your Python app but it crashes on their laptop because they have a different Python version. How would a container help?"
+    kind: scenario
+    answer: "Build a container with your Python version inside. Your friend runs the container, and the app uses that Python — not their system Python. It works the same."
+    concept: containers
+  - prompt: "True or false: Kubernetes runs containers, not virtual machines."
+    kind: recall
+    answer: "True. Kubernetes schedules Pods of containers."
+    concept: containers
+common_mistakes:
+  - mistake: "Thinking a container is a small virtual machine."
+    fix: "A container shares the host kernel. A VM has its own kernel and full OS. Next lesson shows the difference in detail."
+  - mistake: "Thinking every app must be one big container with everything inside."
+    fix: "Keep one main process per container. Use many small containers (in Pods) instead of one big one."
+summary: |
+  A container packs your app, its libraries, and its settings into
+  one box. That box runs the same way on any machine with a
+  container runtime. This fixes the classic 'works on my machine'
+  problem, and it is why Kubernetes schedules containers.
+spaced_hooks:
+  - concept: containers
+    when: next
+  - concept: containers
+    when: "2-3"
+  - concept: containers
+    when: capstone
 check:
   type: manual
