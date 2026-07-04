@@ -3,6 +3,12 @@ title: "ReplicaSets"
 module: running-apps
 order: 2
 estimated_minutes: 18
+learning_goal: "Build a ReplicaSet from YAML and prove it recreates a Pod after you delete one."
+prerequisites:
+  - pods
+  - labels
+  - yaml-apply
+  - kubectl-basics
 intro: |
   # ReplicaSets
 
@@ -74,6 +80,98 @@ cheat: |
   - `template.metadata.labels` **must include** every `selector.matchLabels`.
   - `kubectl get rs`  — list.
   - `kubectl delete pod <name>`  — see self-heal (new Pod appears with fresh name).
+warm_up:
+  - prompt: "What is a Pod, in one sentence?"
+    answer: "The smallest unit in Kubernetes; wraps one (usually) container that shares an IP and volumes."
+    kind: recall
+    concept: pods
+  - prompt: "Why does a Pod need labels?"
+    answer: "So other things (Services, ReplicaSets) can find it by label. Without labels, selectors match nothing."
+    kind: recall
+    concept: labels
+  - prompt: "What does `kubectl apply -f file.yaml` do?"
+    answer: "Sends the YAML to Kubernetes; creates if missing, updates if present."
+    kind: recall
+    concept: yaml-apply
+troubleshooting:
+  scenario: |
+    You apply this ReplicaSet and READY stays at `0/4` forever.
+    New Pods keep appearing and disappearing.
+    ```yaml
+    apiVersion: apps/v1
+    kind: ReplicaSet
+    metadata:
+      name: api-rs
+    spec:
+      replicas: 4
+      selector:
+        matchLabels: { app: api }
+      template:
+        metadata:
+          labels: { app: web }         # <-- different!
+        spec:
+          containers:
+            - name: c
+              image: nginx
+    ```
+  question: "What is wrong and how do you fix it?"
+  diagnosis: |
+    `selector.matchLabels.app` is `api`, but the template puts
+    label `app=web` on Pods. The ReplicaSet creates Pods but
+    cannot 'see' them (its selector does not match). So it
+    creates more Pods, they do not match, it creates more — a
+    silent loop.
+
+    Fix: make `template.metadata.labels` include every key/value
+    of `selector.matchLabels`.
+    ```yaml
+    template:
+      metadata:
+        labels: { app: api }
+    ```
+    Then re-apply.
+  concept: labels
+review_questions:
+  - prompt: "What is the job of a ReplicaSet?"
+    kind: multiple_choice
+    options:
+      - "Runs Pods on a schedule"
+      - "Keeps a fixed number of matching Pods running"
+      - "Gives Pods stable network names"
+      - "Stores secrets"
+    answer: "Keeps a fixed number of matching Pods running. If a Pod dies, it makes a new one."
+    concept: replicasets
+  - prompt: "You delete one Pod that a ReplicaSet manages. What happens next?"
+    kind: scenario
+    answer: "The ReplicaSet notices the count is off and creates a new Pod (with a new random suffix in the name) within seconds. Total stays at the desired replicas."
+    concept: replicasets
+  - prompt: "You want to change the image of a ReplicaSet's Pods. Should you edit the ReplicaSet directly in real life?"
+    kind: recall
+    answer: "No. In real projects you use a Deployment. If you edit a ReplicaSet that a Deployment owns, the Deployment will undo your change."
+    concept: replicasets
+  - prompt: "A ReplicaSet has `replicas: 3` but `kubectl get pods -l app=web` shows 5 Pods. What could be going on?"
+    kind: debug
+    answer: "Other Pods (not from this ReplicaSet) also carry `app=web`. The ReplicaSet only owns 3 of them. To be safe, use more specific labels or add multiple keys to the selector."
+    concept: labels
+common_mistakes:
+  - mistake: "Editing the ReplicaSet directly to change an image."
+    fix: "Change the Deployment. The Deployment will create a new ReplicaSet with the new image and shift Pods to it."
+  - mistake: "`template.metadata.labels` does not include every key of `selector.matchLabels`."
+    fix: "Copy the selector labels into the template labels. They must match, or Pods get created but the ReplicaSet cannot own them."
+  - mistake: "Using `kubectl create` for a ReplicaSet."
+    fix: "`kubectl create` does not support ReplicaSet. Use `kubectl apply -f file.yaml` with a full YAML."
+summary: |
+  A ReplicaSet owns a set of Pods that share labels. It ensures
+  the desired count is always there. In real projects you rarely
+  make one by hand — a Deployment does it for you. The rule you
+  must remember: template labels must include selector labels.
+spaced_hooks:
+  - concept: replicasets
+    when: next
+  - concept: labels
+    when: "2-3"
+  - concept: replicasets
+    when: "5-7"
 check:
   type: multiple
   checks:

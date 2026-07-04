@@ -3,6 +3,11 @@ title: "Jobs and CronJobs"
 module: running-apps
 order: 5
 estimated_minutes: 15
+learning_goal: "Run a one-shot Job, read its logs, and schedule a CronJob to run every minute."
+prerequisites:
+  - pods
+  - deployments
+  - kubectl-basics
 intro: |
   # Jobs
 
@@ -64,6 +69,101 @@ cheat: |
   - `kubectl logs job/NAME`  — read Pod logs via the Job.
   - `.status.succeeded` = how many completions so far.
   - Retry count: `.spec.backoffLimit` (default 6).
+warm_up:
+  - prompt: "What is a Deployment good for?"
+    answer: "Long-running apps (web servers, APIs). Keeps a set of Pods alive."
+    kind: recall
+    concept: deployments
+  - prompt: "What is the smallest unit Kubernetes runs?"
+    answer: "A Pod."
+    kind: recall
+    concept: pods
+  - prompt: "Which command shows the logs of a Pod?"
+    answer: "`kubectl logs <pod>`."
+    kind: recall
+    concept: kubectl-basics
+troubleshooting:
+  scenario: |
+    You created a Job with this YAML:
+    ```yaml
+    apiVersion: batch/v1
+    kind: Job
+    metadata: { name: migrate }
+    spec:
+      template:
+        spec:
+          containers:
+            - name: c
+              image: busybox
+              command: ["sh", "-c", "false"]
+    ```
+    kubectl says:
+    ```
+    The Job "migrate" is invalid: spec.template.spec.restartPolicy:
+    Required value: valid values: "OnFailure", "Never"
+    ```
+  question: "What is wrong and how do you fix it?"
+  diagnosis: |
+    Pods in a Job **must** have `restartPolicy: OnFailure` or
+    `Never`. The default `Always` is only for long-running Pods
+    (Deployments). A Job with `Always` would never end.
+
+    Fix:
+    ```yaml
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure       # or: Never
+          containers: [...]
+    ```
+    - `OnFailure` — restart the same Pod on non-zero exit.
+    - `Never` — create a fresh Pod on non-zero exit (until `backoffLimit`).
+  concept: jobs
+review_questions:
+  - prompt: "When does a Job count a Pod as successful?"
+    kind: multiple_choice
+    options:
+      - "When the Pod is Running"
+      - "When the container exits with code 0"
+      - "When the Pod is Ready"
+      - "After 60 seconds"
+    answer: "When the container exits with code 0. Non-zero exit means fail; the Job retries up to `backoffLimit` times."
+    concept: jobs
+  - prompt: "What is a CronJob?"
+    kind: recall
+    answer: "A Job on a schedule, using cron syntax (`min hour day month weekday`). Kubernetes creates a Job on each tick."
+    concept: jobs
+  - prompt: "You need to run a database migration once, then stop. Which resource fits?"
+    kind: scenario
+    answer: "A Job. Deployments never stop; a Job runs to completion and then stops."
+    concept: jobs
+  - prompt: "You want your report to run every hour on the hour. What is the cron schedule?"
+    kind: recall
+    answer: "`0 * * * *` (minute 0 of every hour)."
+    concept: jobs
+  - prompt: "Your Job Pod exits non-zero 6 times and then stops retrying. Why?"
+    kind: debug
+    answer: "The default `backoffLimit` is 6. After that many failures the Job is marked Failed. Fix the bug or raise `backoffLimit`."
+    concept: jobs
+common_mistakes:
+  - mistake: "Leaving `restartPolicy` unset (defaults to `Always`)."
+    fix: "Set `restartPolicy: OnFailure` or `Never` in Job Pod templates."
+  - mistake: "Reading logs with `kubectl logs <job-name>`; kubectl says 'not found'."
+    fix: "Use `kubectl logs job/<name>` or find the Pod: `kubectl get pods -l job-name=<name>` then `kubectl logs <pod>`."
+  - mistake: "Using a Deployment for a one-off task."
+    fix: "Use a Job. Deployment Pods never finish; they restart forever."
+summary: |
+  Use a Job for one-off work (migrations, batch tasks) and a
+  CronJob when the work should repeat on a schedule. Remember to
+  set `restartPolicy: OnFailure` or `Never`, and use
+  `kubectl logs job/<name>` to read output.
+spaced_hooks:
+  - concept: jobs
+    when: "5-7"
+  - concept: jobs
+    when: capstone
+  - concept: deployments
+    when: next
 check:
   type: multiple
   checks:

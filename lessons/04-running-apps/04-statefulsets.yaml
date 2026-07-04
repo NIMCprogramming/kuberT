@@ -3,6 +3,12 @@ title: "StatefulSets"
 module: running-apps
 order: 4
 estimated_minutes: 18
+learning_goal: "Build a StatefulSet with stable Pod names and see one Pod come back with the same name after delete."
+prerequisites:
+  - pods
+  - deployments
+  - labels
+  - yaml-apply
 intro: |
   # StatefulSets
 
@@ -70,6 +76,87 @@ cheat: |
   - `kubectl get sts`  — short form.
   - Delete Pod `NAME-0` — it comes back with the **same name**.
   - Needs a **headless Service** (`clusterIP: None`) for DNS names to work.
+warm_up:
+  - prompt: "What owns a ReplicaSet in a normal app?"
+    answer: "A Deployment. Chain: Deployment -> ReplicaSet -> Pods."
+    kind: recall
+    concept: deployments
+  - prompt: "Why do Pods have labels?"
+    answer: "So controllers (Deployments, ReplicaSets, Services) can find them by selector."
+    kind: recall
+    concept: labels
+  - prompt: "What does `kubectl rollout undo deploy/api` do?"
+    answer: "Reverts the Deployment to its previous ReplicaSet (the last working version)."
+    kind: recall
+    concept: deployments
+troubleshooting:
+  scenario: |
+    You applied a StatefulSet named `cache` with 3 replicas. But
+    only `cache-0` is Running. `cache-1` sticks in `Pending` and
+    `cache-2` does not exist at all.
+    ```
+    NAME      READY   STATUS    RESTARTS   AGE
+    cache-0   1/1     Running   0          40s
+    cache-1   0/1     Pending   0          30s
+    ```
+  question: "Why is only one Pod up, and how do you make progress?"
+  diagnosis: |
+    A StatefulSet starts Pods **in order**. `cache-1` cannot
+    start until `cache-0` is Ready. `cache-2` waits for `cache-1`.
+    In your case `cache-1` is Pending — often because the node has
+    no room, or a volume is missing.
+
+    How to see the exact cause:
+    ```
+    kubectl describe pod cache-1
+    ```
+    Look at the Events at the bottom. If you see "0/1 nodes are
+    available", the node has no room. If you see a PVC pending,
+    fix storage (see module 10).
+
+    Once `cache-1` is Ready, `cache-2` will start.
+  concept: statefulsets
+review_questions:
+  - prompt: "Which is TRUE about a StatefulSet vs a Deployment?"
+    kind: multiple_choice
+    options:
+      - "StatefulSet Pods have random name suffixes"
+      - "StatefulSet Pods have stable, ordered names (NAME-0, NAME-1, ...)"
+      - "Deployment Pods keep the same name after restart"
+      - "StatefulSet Pods start in any order"
+    answer: "StatefulSet Pods have stable, ordered names (NAME-0, NAME-1, ...). Deployment Pod names have random suffixes."
+    concept: statefulsets
+  - prompt: "You delete `db-0` from a StatefulSet. What name comes back?"
+    kind: recall
+    answer: "`db-0` again. StatefulSets reuse the same identity so storage and DNS keep working."
+    concept: statefulsets
+  - prompt: "Why must a StatefulSet reference a headless Service (`clusterIP: None`) in `serviceName`?"
+    kind: scenario
+    answer: "So each Pod gets a stable DNS name like `db-0.cache.default.svc.cluster.local`. Without the headless Service, DNS does not work for individual Pods."
+    concept: statefulsets
+  - prompt: "True or false: use a StatefulSet for a stateless web server."
+    kind: recall
+    answer: "False. Deployments fit stateless apps better. StatefulSets are for stateful apps like databases."
+    concept: statefulsets
+common_mistakes:
+  - mistake: "Using a StatefulSet for a stateless web app because 'stable' sounds nice."
+    fix: "Deployments are simpler and fit stateless apps. Reach for StatefulSet only when you need stable names, ordered start, or per-Pod storage."
+  - mistake: "Copying Deployment volume patterns into a StatefulSet."
+    fix: "Use `volumeClaimTemplates` in a StatefulSet so each Pod gets its OWN disk. In a Deployment all Pods share the same PVC (usually the wrong pattern for state)."
+  - mistake: "Deleting a StatefulSet Pod without care during a database operation."
+    fix: "Drain traffic first and follow the app's shutdown steps. A Pod like `db-0` may hold the primary role."
+summary: |
+  StatefulSets give Pods stable names and an ordered start, plus
+  optional per-Pod storage. They pair with a headless Service for
+  DNS. Use them for databases and other stateful workloads. For
+  everyday web apps, keep using Deployments.
+spaced_hooks:
+  - concept: statefulsets
+    when: "5-7"
+  - concept: deployments
+    when: next
+  - concept: pods
+    when: "2-3"
 check:
   type: multiple
   checks:

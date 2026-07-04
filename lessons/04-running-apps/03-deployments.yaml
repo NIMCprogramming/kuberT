@@ -3,6 +3,12 @@ title: "Deployments"
 module: running-apps
 order: 3
 estimated_minutes: 20
+learning_goal: "Create a Deployment, scale it, roll it forward, and roll it back."
+prerequisites:
+  - pods
+  - replicasets
+  - labels
+  - kubectl-basics
 intro: |
   # Deployments
 
@@ -90,6 +96,109 @@ cheat: |
   - `kubectl rollout undo deploy/NAME [--to-revision=N]`  — roll back.
   - `kubectl delete deploy NAME`  — remove.
   - Container name after `kubectl create deployment IMG`: it is `IMG` (image without tag).
+warm_up:
+  - prompt: "What does a ReplicaSet keep constant?"
+    answer: "A fixed number of Pods that match its selector labels."
+    kind: recall
+    concept: replicasets
+  - prompt: "What is a Pod?"
+    answer: "The smallest unit in Kubernetes; wraps one or more containers that share an IP."
+    kind: recall
+    concept: pods
+  - prompt: "Why do template labels need to match selector labels?"
+    answer: "Otherwise the controller (ReplicaSet, Deployment) creates Pods it cannot own, and loops forever."
+    kind: recall
+    concept: labels
+troubleshooting:
+  scenario: |
+    You wrote this YAML for a Deployment and applied it:
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: api
+    spec:
+      replicas: 3
+      template:
+        metadata:
+          labels: { app: api }
+        spec:
+          containers:
+            - name: c
+              image: nginx
+    ```
+    kubectl says:
+    ```
+    error: error validating data: ValidationError(Deployment.spec):
+    missing required field "selector"
+    ```
+  question: "What did you forget, and how do you fix it?"
+  diagnosis: |
+    Deployment requires `spec.selector.matchLabels`. Unlike
+    `kubectl create deployment` (which fills it in for you), a
+    hand-written YAML must include the selector.
+
+    Fix:
+    ```yaml
+    spec:
+      replicas: 3
+      selector:
+        matchLabels: { app: api }
+      template:
+        metadata:
+          labels: { app: api }
+        spec: ...
+    ```
+    The selector keys must be present in the template labels.
+  concept: deployments
+review_questions:
+  - prompt: "Chain from a Deployment to Pods is:"
+    kind: multiple_choice
+    options:
+      - "Deployment -> Pod -> ReplicaSet"
+      - "ReplicaSet -> Deployment -> Pod"
+      - "Deployment -> ReplicaSet -> Pod"
+      - "Pod -> Deployment -> ReplicaSet"
+    answer: "Deployment -> ReplicaSet -> Pod. Deployment owns a ReplicaSet, which owns Pods."
+    concept: deployments
+  - prompt: "You updated the image with `kubectl set image` but a new Pod immediately crashes. Which command reverts to the last working version?"
+    kind: scenario
+    answer: "`kubectl rollout undo deploy/<name>`. It brings back the previous ReplicaSet."
+    concept: deployments
+  - prompt: "How do you scale a Deployment named `api` up to 10 replicas without editing YAML?"
+    kind: recall
+    answer: "`kubectl scale deploy/api --replicas=10`."
+    concept: deployments
+  - prompt: "You edit a ReplicaSet owned by a Deployment and change its image. What happens?"
+    kind: debug
+    answer: "The Deployment reverts your change soon because it is the source of truth. Change the Deployment, not the ReplicaSet."
+    concept: replicasets
+  - prompt: "Which command waits until a rollout is finished?"
+    kind: recall
+    answer: "`kubectl rollout status deploy/<name>`."
+    concept: deployments
+common_mistakes:
+  - mistake: "Forgetting `spec.selector.matchLabels` in hand-written Deployment YAML."
+    fix: "Always add it, and make sure the same labels are in `template.metadata.labels`."
+  - mistake: "Editing the ReplicaSet to change the image."
+    fix: "Edit the Deployment (or use `kubectl set image deploy/NAME c=IMG`). The Deployment owns the ReplicaSet."
+  - mistake: "Setting `replicas` in YAML AND using an HPA later, without care."
+    fix: "The HPA controls replicas. If your YAML also sets it, remove `replicas` (or expect fights). More in module 12."
+summary: |
+  A Deployment is the everyday way to run apps. It owns a
+  ReplicaSet, which owns Pods. You scale, roll forward, and roll
+  back with `kubectl scale`, `kubectl set image`, and
+  `kubectl rollout undo`. Almost every later lesson uses a
+  Deployment.
+spaced_hooks:
+  - concept: deployments
+    when: next
+  - concept: deployments
+    when: "2-3"
+  - concept: deployments
+    when: "5-7"
+  - concept: deployments
+    when: capstone
 check:
   type: multiple
   checks:
