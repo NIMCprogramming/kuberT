@@ -3,6 +3,11 @@ title: "Horizontal Pod Autoscaler (HPA)"
 module: autoscaling
 order: 1
 estimated_minutes: 18
+learning_goal: "Attach an HPA to a Deployment that has CPU requests and see it scale to the minimum."
+prerequisites:
+  - deployments
+  - requests-limits
+  - metrics
 intro: |
   # HPA — add and remove Pods
 
@@ -52,7 +57,19 @@ intro: |
             type: Utilization
             averageUtilization: T
   ```
-
+warm_up:
+  - prompt: "What field must a container set for CPU so the scheduler and HPA can work well?"
+    answer: "`resources.requests.cpu`. It tells Kubernetes the CPU the container needs at start."
+    kind: recall
+    concept: requests-limits
+  - prompt: "What does a Deployment do that a bare Pod does not?"
+    answer: "It keeps a set number of Pods running and does rolling updates when the template changes."
+    kind: recall
+    concept: deployments
+  - prompt: "Which add-on provides live CPU and memory numbers for Pods?"
+    answer: "metrics-server. Without it, `kubectl top` and HPA readings are missing."
+    kind: recall
+    concept: metrics
 task: |
   **Your goal:** create a Deployment that HPA can actually manage
   (it must have a CPU request), then attach an HPA.
@@ -81,6 +98,72 @@ hint: |
   - Check: `kubectl get hpa nginx-app` and `kubectl get deploy nginx-app`.
   - See the full HPA: `kubectl get hpa nginx-app -o yaml`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You attached an HPA to a Deployment. But the output shows:
+    ```
+    NAME        REFERENCE              TARGETS         MINPODS   MAXPODS   REPLICAS
+    web         Deployment/web         <unknown>/60%   2         5         2
+    ```
+    The `TARGETS` column stays `<unknown>` for many minutes.
+    The Deployment YAML has no `resources` block on the container.
+  question: "Why is TARGETS `<unknown>`, and what must you fix?"
+  diagnosis: |
+    HPA needs two things:
+    1. metrics-server running in the cluster.
+    2. Every target Pod must set `resources.requests.cpu`.
+
+    With no CPU request, HPA cannot compute a percent, so it shows
+    `<unknown>`. On a `kind` cluster, metrics-server is also missing
+    by default, which makes it worse.
+
+    Fix: add `resources.requests.cpu` (and a matching limit) to the
+    container in the Deployment template, then re-apply.
+  concept: hpa
+review_questions:
+  - prompt: "An HPA is set to min=2, max=10 and target CPU 50%. Pods average 80% CPU. What happens?"
+    kind: multiple_choice
+    options:
+      - "HPA removes Pods."
+      - "HPA adds Pods, up to 10."
+      - "HPA does nothing until the value drops."
+      - "HPA restarts the Pods."
+    answer: "HPA adds Pods, up to 10. Real CPU is above target, so it scales out."
+    concept: hpa
+  - prompt: "You created an HPA for a Deployment but no CPU request is set on the container. `kubectl get hpa` shows `<unknown>`. Why?"
+    kind: debug
+    answer: "HPA measures CPU as a percent of the request. No request means no percent to compute, so the reading is `<unknown>`. Add `resources.requests.cpu` to the container."
+    concept: requests-limits
+  - prompt: "Your team uses HPA on CPU. They also want VPA to change CPU requests on the same Deployment. What is the risk?"
+    kind: scenario
+    answer: "HPA and VPA on the same metric fight each other. HPA scales Pod count from CPU while VPA changes the CPU request under it. Use VPA only in `Off` (recommend) mode, or make HPA use a different metric."
+    concept: vpa
+  - prompt: "True or false: an HPA can scale a Deployment down to 0 Pods."
+    kind: recall
+    answer: "False by default (minReplicas is at least 1). Scale-to-zero needs extra tools like KEDA."
+    concept: hpa
+common_mistakes:
+  - mistake: "Attaching HPA to a Deployment with no `resources.requests.cpu`."
+    fix: "Always set CPU requests on the container. Without it, HPA readings are `<unknown>` and it cannot decide."
+  - mistake: "Expecting live CPU numbers on `kind` with no metrics-server."
+    fix: "Install metrics-server (or use a managed cluster). On `kind`, the HPA spec is fine but the reading stays `<unknown>`."
+  - mistake: "Using HPA and VPA on the same CPU metric."
+    fix: "They will fight. Pick one, or run VPA in `Off` mode (recommend only)."
+summary: |
+  HPA adds and removes Pods based on a metric (usually CPU as a
+  percent of the request). Two rules make it work: set CPU
+  requests on the container, and install metrics-server. Later
+  you will pair HPA with canary and blue-green patterns, and
+  compare it with VPA and Cluster Autoscaler.
+spaced_hooks:
+  - concept: hpa
+    when: next
+  - concept: hpa
+    when: "2-3"
+  - concept: hpa
+    when: "5-7"
+  - concept: hpa
+    when: capstone
 cheat: |
   ### HPA
   - Adds/removes Pods based on CPU (or custom metric).

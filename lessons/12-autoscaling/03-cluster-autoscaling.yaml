@@ -3,6 +3,11 @@ title: "Cluster autoscaling"
 module: autoscaling
 order: 3
 estimated_minutes: 6
+learning_goal: "Explain how a cluster autoscaler adds nodes when Pods are Pending, and know when to pick Karpenter vs cluster-autoscaler."
+prerequisites:
+  - hpa
+  - vpa
+  - scheduling-basics
 intro: |
   # More or fewer nodes
 
@@ -25,8 +30,79 @@ intro: |
   Kubernetes in the cloud.
 
   This lesson is for reading.
+warm_up:
+  - prompt: "What does HPA do when CPU is high?"
+    answer: "It adds Pods to the Deployment, up to `maxReplicas`."
+    kind: recall
+    concept: hpa
+  - prompt: "Why can a Pod stay in `Pending` state?"
+    answer: "No node has enough free CPU or memory for its `requests`, or the taints/tolerations do not match."
+    kind: recall
+    concept: scheduling-basics
+  - prompt: "What does VPA change on a Pod?"
+    answer: "The CPU and memory `requests` (and limits), by restarting the Pod with new values."
+    kind: recall
+    concept: vpa
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    HPA scaled a Deployment from 5 Pods to 20. Now 8 of the new
+    Pods are stuck in `Pending`. Cluster Autoscaler is installed,
+    but no new nodes appear. Events show:
+    ```
+    0/3 nodes are available: 3 Insufficient cpu.
+    ```
+    The node group has `min=3, max=3`.
+  question: "Why does no new node appear?"
+  diagnosis: |
+    The node group max is `3`, and the group already has `3` nodes.
+    Cluster Autoscaler cannot add a fourth node, so Pods keep
+    Pending.
+
+    Fix: raise the node group `max` (or add a second node group,
+    or move to Karpenter, which picks a node type on the fly with
+    a broader budget).
+  concept: cluster-autoscaling
+review_questions:
+  - prompt: "When does the classic Cluster Autoscaler decide to add a node?"
+    kind: multiple_choice
+    options:
+      - "When CPU on a node is over 90%."
+      - "When a Pod is `Pending` because no node has space."
+      - "Every 5 minutes on a timer."
+      - "When you call `kubectl scale nodes`."
+    answer: "When a Pod is `Pending` because no node has space."
+    concept: cluster-autoscaling
+  - prompt: "Which autoscaler is best on AWS if you want to mix Spot, ARM, and different sizes automatically?"
+    kind: scenario
+    answer: "Karpenter. It picks the best node type on the fly, not from a fixed node group."
+    concept: cluster-autoscaling
+  - prompt: "You set HPA `max=50` but Cluster Autoscaler `max=5 nodes`. What happens under high load?"
+    kind: debug
+    answer: "HPA asks for more Pods, but new Pods stay `Pending` because Cluster Autoscaler cannot add more nodes. Raise the node cap or add a second node group."
+    concept: cluster-autoscaling
+  - prompt: "True or false: Cluster Autoscaler works on `kind` clusters."
+    kind: recall
+    answer: "False. There is no cloud API to add nodes. Use a real cloud (EKS, GKE, AKS) to see it work."
+    concept: cluster-autoscaling
+common_mistakes:
+  - mistake: "Setting HPA `maxReplicas` very high but leaving node group `max` small."
+    fix: "The two limits must match. HPA can only fill the room the node autoscaler creates."
+  - mistake: "Choosing the wrong instance type for Karpenter provisioners (too small or the wrong CPU arch)."
+    fix: "Set instance requirements that cover your Pods' `requests` and arch (`amd64`/`arm64`)."
+summary: |
+  Cluster Autoscaler adds and removes nodes so Pods can land.
+  Pair it with HPA for full elasticity: HPA scales Pods, Cluster
+  Autoscaler scales the nodes under them. On AWS, Karpenter is a
+  fast, flexible option. On `kind`, this is theory only.
+spaced_hooks:
+  - concept: cluster-autoscaling
+    when: next
+  - concept: cluster-autoscaling
+    when: "5-7"
+  - concept: cluster-autoscaling
+    when: capstone
 cheat: |
   ### Cluster autoscaling
   Adds/removes **nodes** (not Pods).

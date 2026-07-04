@@ -3,6 +3,11 @@ title: "Vertical Pod Autoscaler (VPA)"
 module: autoscaling
 order: 2
 estimated_minutes: 6
+learning_goal: "Explain how VPA re-sizes Pods, and know when to use VPA instead of HPA."
+prerequisites:
+  - hpa
+  - requests-limits
+  - optimize-usage
 intro: |
   # VPA — make Pods bigger or smaller
 
@@ -25,8 +30,80 @@ intro: |
   - Databases and big single-Pod jobs → VPA (or manual sizing).
 
   This lesson is for reading only.
+warm_up:
+  - prompt: "What does HPA change on a workload?"
+    answer: "The number of Pods (replicas). It does not change the size of one Pod."
+    kind: recall
+    concept: hpa
+  - prompt: "Why is over-requesting CPU or memory a problem?"
+    answer: "It reserves resources you do not use. The scheduler thinks the node is full, so other Pods cannot land."
+    kind: recall
+    concept: optimize-usage
+  - prompt: "What is the difference between `requests` and `limits` on a container?"
+    answer: "`requests` = what the Pod needs to be scheduled. `limits` = the max it can use before it is throttled or killed."
+    kind: recall
+    concept: requests-limits
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    A team put VPA in `Auto` mode on a Deployment. They also have
+    an HPA on the same Deployment that scales on CPU. Pods keep
+    restarting, and the number of replicas jumps up and down.
+  question: "What is wrong?"
+  diagnosis: |
+    HPA and VPA are fighting on the same CPU metric.
+
+    - HPA sees high CPU → adds Pods.
+    - VPA also sees high CPU → makes each Pod bigger (and restarts
+      it).
+    - After VPA re-sizes, CPU % drops → HPA removes Pods → cycle
+      repeats.
+
+    Fix options:
+    - Put VPA in `Off` mode (recommend only, no restart).
+    - Or keep VPA in `Auto` and let HPA scale on a different metric
+      (custom app metric, not CPU).
+  concept: vpa
+review_questions:
+  - prompt: "You run a busy stateless web app. Which autoscaler is the best fit?"
+    kind: multiple_choice
+    options:
+      - "HPA — add more Pods."
+      - "VPA in `Auto` — resize the one Pod."
+      - "Neither — set replicas by hand."
+      - "Both HPA and VPA on CPU."
+    answer: "HPA. Stateless apps like more copies of the same size."
+    concept: hpa
+  - prompt: "What does VPA `Off` mode do?"
+    kind: recall
+    answer: "It only gives a recommendation. It does not change Pods or restart them. Great for learning what a Pod really needs."
+    concept: vpa
+  - prompt: "You want VPA on a Postgres StatefulSet. What is the risk of `Auto` mode?"
+    kind: scenario
+    answer: "VPA restarts Pods to change size. Postgres restarts break connections and may cause a leader election. Prefer `Off` (recommend), or resize by hand during a maintenance window."
+    concept: vpa
+  - prompt: "True or false: VPA is a built-in Kubernetes controller."
+    kind: recall
+    answer: "False. You install it as an add-on from `kubernetes/autoscaler`."
+    concept: vpa
+common_mistakes:
+  - mistake: "Running VPA `Auto` and HPA on the **same CPU metric** on one Deployment."
+    fix: "They conflict. Use VPA `Off` for recommendation, or make HPA use a custom metric."
+  - mistake: "Turning on VPA `Auto` for a database and being surprised by restarts."
+    fix: "Databases hate surprise restarts. Use `Off` mode and apply new sizes yourself."
+summary: |
+  VPA changes the size of Pods (CPU and memory requests). HPA
+  changes the count of Pods. They can help together only if they
+  work on different metrics. In practice, start VPA in `Off` mode
+  and read the recommendations before letting it act.
+spaced_hooks:
+  - concept: vpa
+    when: next
+  - concept: vpa
+    when: "5-7"
+  - concept: vpa
+    when: capstone
 cheat: |
   ### VPA
   - Adjusts CPU/memory **requests** based on real usage.
