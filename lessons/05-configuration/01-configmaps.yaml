@@ -3,6 +3,11 @@ title: "ConfigMaps"
 module: configuration
 order: 1
 estimated_minutes: 20
+learning_goal: "Store non-secret settings in a ConfigMap and read them from a Pod as environment variables."
+prerequisites:
+  - pods
+  - yaml-apply
+  - kubectl
 intro: |
   # ConfigMaps
 
@@ -48,7 +53,19 @@ intro: |
           name: CM_NAME        # which ConfigMap
           key:  CM_KEY         # which key
   ```
-
+warm_up:
+  - prompt: "What is a Pod? (one sentence)"
+    answer: "The smallest unit in Kubernetes. It runs one (or a few) containers that share IP and volumes."
+    kind: recall
+    concept: pods
+  - prompt: "What does `kubectl apply -f my.yaml` do?"
+    answer: "It sends the YAML to Kubernetes. New resource gets created; existing one gets updated."
+    kind: recall
+    concept: yaml-apply
+  - prompt: "You wrote a Pod with `image: nginx:2.99`. STATUS shows `ImagePullBackOff`. What is wrong?"
+    answer: "The image tag `2.99` does not exist. The node cannot pull it. Use a real tag like `nginx` or `nginx:1.27`."
+    kind: debug
+    concept: images
 task: |
   **Your goal:** create a ConfigMap AND make a Pod that actually
   reads it.
@@ -77,6 +94,76 @@ hint: |
   - Wrap the heredoc in `<<'EOF'` (with quotes) so `$GREETING` and `$LOG_LEVEL` do NOT get expanded before Kubernetes sees them.
   - Verify env from inside: `kubectl exec cm-user -- env | grep -E 'GREETING|LOG_LEVEL'`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You created the ConfigMap and this Pod. But `kubectl logs cm-user`
+    shows `GREETING= LOG_LEVEL=info` (the GREETING is empty).
+    ```yaml
+    env:
+      - name: GREETING
+        valueFrom:
+          configMapKeyRef:
+            name: app-config
+            key: greeting        # <-- lowercase
+      - name: LOG_LEVEL
+        valueFrom:
+          configMapKeyRef:
+            name: app-config
+            key: LEVEL
+    ```
+  question: "Why is GREETING empty?"
+  diagnosis: |
+    The ConfigMap key is `GREETING` (uppercase), but the Pod asks
+    for `greeting` (lowercase). Keys are case-sensitive.
+
+    How to see the real keys: `kubectl describe cm app-config` or
+    `kubectl get cm app-config -o yaml`.
+
+    Fix: change `key: greeting` to `key: GREETING` and re-apply.
+  concept: configmap
+review_questions:
+  - prompt: "Which pair of things does a ConfigMap store?"
+    kind: multiple_choice
+    options:
+      - "Private passwords and TLS keys"
+      - "Non-secret settings like URLs, feature flags, and small config files"
+      - "Container images"
+      - "Node IP addresses"
+    answer: "Non-secret settings like URLs, feature flags, and small config files."
+    concept: configmap
+  - prompt: "In `name: LOG_LEVEL` + `key: LEVEL`, which one is the ConfigMap key and which one is the env var name?"
+    kind: recall
+    answer: "`name: LOG_LEVEL` is the env var name inside the container. `key: LEVEL` is the ConfigMap key. They can be different."
+    concept: configmap
+  - prompt: "Should you put a database password in a ConfigMap?"
+    kind: scenario
+    answer: "No. Use a Secret. ConfigMap values are stored in plain text in etcd and visible to anyone with `get configmap` rights."
+    concept: secret
+  - prompt: "You changed a ConfigMap value. The Pod still shows the old value in its env. Why?"
+    kind: debug
+    answer: "Env vars are set once, at Pod start. They do not refresh. Delete the Pod so the Deployment (or you) creates a new one that reads the new value. ConfigMap mounted as a **file** would update — env vars do not."
+    concept: configmap
+common_mistakes:
+  - mistake: "Mixing up the env var `name` and the ConfigMap `key`. You set `name: LEVEL` and wonder why `$LOG_LEVEL` is empty."
+    fix: "Read from top to bottom: `name` = env var inside the container; `key` = which ConfigMap entry to copy from."
+  - mistake: "Putting secrets in a ConfigMap because it feels easier."
+    fix: "Anyone with `get cm` rights can read them. Use a Secret for anything private."
+  - mistake: "Editing a ConfigMap and expecting running Pods to see the new env values."
+    fix: "Env vars only load at Pod start. Restart the Pod (or use a file-mounted ConfigMap, which updates)."
+summary: |
+  A ConfigMap keeps non-secret settings out of your image. Pods
+  read it as env vars or as files. Keys are case-sensitive, and
+  env vars only load at Pod start. You will use ConfigMaps in
+  almost every module from now on.
+spaced_hooks:
+  - concept: configmap
+    when: next
+  - concept: configmap
+    when: "2-3"
+  - concept: configmap
+    when: "5-7"
+  - concept: configmap
+    when: capstone
 cheat: |
   ### ConfigMaps
   - For **non-secret** settings: URLs, feature flags, config files.
