@@ -31,3 +31,9 @@ def show_failure(text: str) -> None:
 
 def show_info(text: str) -> None:
     console.print(f"[cyan][i][/cyan] {text}")
+
+
+def show_extras(text: str) -> None:
+    if not text.strip():
+        return
+    console.print(Panel(Markdown(text), title="Recall / Review", border_style="magenta"))

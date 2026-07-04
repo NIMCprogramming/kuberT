@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from kubert.models import UserProgress
+from kubert.models import MissedConcept, UserProgress
 
 
 def _file() -> Path:
@@ -24,3 +24,15 @@ def reset_progress() -> None:
     f = _file()
     if f.exists():
         f.unlink()
+
+
+def record_missed_concept(progress: UserProgress, concept: str, lesson_id: str) -> None:
+    if not concept:
+        return
+    for entry in progress.missed_concepts:
+        if entry.concept == concept and entry.lesson_id == lesson_id:
+            entry.count += 1
+            save_progress(progress)
+            return
+    progress.missed_concepts.append(MissedConcept(concept=concept, lesson_id=lesson_id))
+    save_progress(progress)

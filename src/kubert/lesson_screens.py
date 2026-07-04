@@ -5,10 +5,11 @@ from textual.containers import VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Markdown, RichLog, Static
 
-from kubert import cluster, clipboard
+from kubert import clipboard, cluster
 from kubert.checker import run_check
 from kubert.lesson import discover_lessons, get_default_lessons_root
-from kubert.models import Lesson, ManualCheck
+from kubert.models import Lesson, ManualCheck, Question
+from kubert.quiz_screen import QuizScreen
 from kubert.state import load_progress, save_progress
 
 
@@ -48,14 +49,18 @@ class LessonScreen(Screen[None]):
         Binding("escape", "app.pop_screen", "Back"),
         Binding("c",      "do_primary",     "Check / Confirm"),
         Binding("h",      "do_hint",        "Hint"),
+        Binding("w",      "do_warmup",      "Warm-up quiz"),
+        Binding("r",      "do_review",      "Review quiz"),
         Binding("n",      "do_next",        "Next lesson"),
         Binding("s",      "app.pop_screen", "Skip"),
     ]
     CSS = """
     LessonScreen { layout: vertical; }
     #lesson-title { padding: 0 2; margin: 1 2 0 2; color: $accent; }
+    #learning-goal { padding: 0 2; margin: 0 2 1 2; color: $primary; }
     #intro   { padding: 0 2; margin: 1 2 0 2; }
     #task    { border: round $warning; padding: 1 2; margin: 1 2; }
+    #extras  { padding: 0 2; margin: 0 2 1 2; }
     #output  { border: round $primary; padding: 0 1; margin: 0 2 1 2; height: 10; }
     """
 
@@ -69,12 +74,43 @@ class LessonScreen(Screen[None]):
             f"[b]{self.lesson.id}[/b] — {self.lesson.title}",
             id="lesson-title",
         )
+        if self.lesson.learning_goal:
+            yield Static(f"[b]Goal:[/b] {self.lesson.learning_goal}", id="learning-goal")
         with VerticalScroll():
             yield Markdown(self.lesson.intro, id="intro")
             if not isinstance(self.lesson.check, ManualCheck):
                 yield Markdown(self.lesson.task, id="task")
+            extras = self._build_extras()
+            if extras:
+                yield Markdown(extras, id="extras")
         yield RichLog(id="output", markup=True)
         yield Footer()
+
+    def _build_extras(self) -> str:
+        parts: list[str] = []
+        if self.lesson.prerequisites:
+            parts.append(
+                "## Builds on\n" + ", ".join(f"`{p}`" for p in self.lesson.prerequisites)
+            )
+        if self.lesson.warm_up:
+            parts.append("## Warm-up recall\nPress **w** to start the warm-up quiz.")
+        if self.lesson.troubleshooting:
+            ts = self.lesson.troubleshooting
+            parts.append(
+                f"## Troubleshooting scenario\n{ts.scenario}\n\n"
+                f"**Question:** {ts.question}\n\n"
+                f"<details>\n\n**Diagnosis:** {ts.diagnosis}\n\n</details>"
+            )
+        if self.lesson.review_questions:
+            parts.append("## Review\nPress **r** to start the review quiz.")
+        if self.lesson.common_mistakes:
+            lines = ["## Common mistakes"]
+            for m in self.lesson.common_mistakes:
+                lines.append(f"- **{m.mistake}** — {m.fix}")
+            parts.append("\n".join(lines))
+        if self.lesson.summary:
+            parts.append(f"## Mini summary\n{self.lesson.summary}")
+        return "\n\n".join(parts)
 
     def on_mount(self) -> None:
         ok, msg = self._check_req()
@@ -83,9 +119,12 @@ class LessonScreen(Screen[None]):
             log.write(f"[red]{msg}[/red]")
         else:
             if isinstance(self.lesson.check, ManualCheck):
-                tip = "Press [b]c[/b] to mark as read, [b]n[/b] to skip to next."
+                tip = "[b]c[/b] read  [b]w[/b] warm-up  [b]r[/b] review  [b]n[/b] next"
             else:
-                tip = "[b]c[/b] check  [b]h[/b] hint  [b]n[/b] next  [b]s[/b] skip"
+                tip = (
+                    "[b]c[/b] check  [b]h[/b] hint  [b]w[/b] warm-up  "
+                    "[b]r[/b] review  [b]n[/b] next  [b]s[/b] skip"
+                )
             log.write(f"[dim]{tip}[/dim]")
             log.write("[dim]Drag the mouse to select text — it's copied to the clipboard on release.[/dim]")
 
@@ -127,6 +166,18 @@ class LessonScreen(Screen[None]):
             log.write("[dim]No hint for reading lessons.[/dim]")
             return
         log.write(f"[blue]Hint: {self.lesson.hint or 'No hint.'}[/blue]")
+
+    def action_do_warmup(self) -> None:
+        self._push_quiz(self.lesson.warm_up, "Warm-up quiz")
+
+    def action_do_review(self) -> None:
+        self._push_quiz(self.lesson.review_questions, "Review quiz")
+
+    def _push_quiz(self, questions: list[Question], title: str) -> None:
+        if not questions:
+            self.app.notify("No questions for this lesson yet.", severity="information")
+            return
+        self.app.push_screen(QuizScreen(self.lesson, questions, title))
 
     def on_mouse_up(self, event: events.MouseUp) -> None:
         self.call_after_refresh(self._copy_selection)
