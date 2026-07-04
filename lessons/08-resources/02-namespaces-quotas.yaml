@@ -3,6 +3,12 @@ title: "Namespaces and Quotas"
 module: resources
 order: 2
 estimated_minutes: 18
+learning_goal: "Create a namespace with a ResourceQuota and prove that Pods without requests are rejected while small Pods succeed."
+prerequisites:
+  - pods
+  - requests-limits
+  - kubectl
+  - rbac
 intro: |
   # Namespaces
 
@@ -51,7 +57,19 @@ intro: |
   **Big trap:** if a namespace has a ResourceQuota on CPU or
   memory, then **every new Pod must set requests and limits**, or
   the API refuses to create it.
-
+warm_up:
+  - prompt: "What does `requests.cpu: 100m` mean?"
+    answer: "The container asks for 0.1 of one CPU core. Scheduler uses this to pick a node."
+    kind: recall
+    concept: requests-limits
+  - prompt: "How do you list Services in a namespace called `web`?"
+    answer: "`kubectl get services -n web` (or `kubectl get svc -n web`)."
+    kind: recall
+    concept: kubectl-basics
+  - prompt: "A container goes over its memory limit. What happens?"
+    answer: "It is OOMKilled. Kubernetes restarts it per the Pod's restart policy."
+    kind: recall
+    concept: requests-limits
 task: |
   **Your goal:** build a small quota-controlled sandbox.
 
@@ -78,6 +96,74 @@ hint: |
   - Accepted Pod (with requests): use `--overrides` with a JSON that adds `resources.requests.cpu` and `resources.requests.memory`, or apply a YAML.
   - See usage: `kubectl describe resourcequota limits -n sandbox`.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    A dev complains: "`kubectl apply` succeeds, but no Pod
+    appears!"
+    ```
+    $ kubectl apply -f web.yaml
+    deployment.apps/web created
+    $ kubectl get pods
+    No resources found in default namespace.
+    ```
+    They wrote the Deployment YAML with `metadata: { namespace: dev }`.
+  question: "Where are the Pods, and what did the dev forget?"
+  diagnosis: |
+    The Deployment was created in namespace `dev`, not `default`.
+    `kubectl get pods` (no `-n`) only shows the `default`
+    namespace, so they see nothing.
+
+    Fix: add `-n`.
+    ```
+    kubectl get pods -n dev
+    ```
+    Long-term: `kubectl config set-context --current --namespace=dev`
+    so every command uses `dev` by default.
+  concept: namespaces
+review_questions:
+  - prompt: "What does a ResourceQuota with `requests.cpu: 500m` do?"
+    kind: multiple_choice
+    options:
+      - "Every single Pod is limited to 500m CPU"
+      - "The **sum** of `requests.cpu` across all Pods in the namespace cannot exceed 500m"
+      - "Only Pods with 500m request are allowed"
+      - "The namespace cannot use more than 500m at runtime"
+    answer: "The **sum** of `requests.cpu` across all Pods in the namespace cannot exceed 500m."
+    concept: resource-quotas
+  - prompt: "You added a CPU quota to a namespace. Now `kubectl run x --image=nginx` fails silently. Why?"
+    kind: debug
+    answer: "Once a CPU/memory quota exists, every new Pod must set `requests`. Without them, the API rejects the Pod. Add requests, or use a LimitRange to default them."
+    concept: resource-quotas
+  - prompt: "Which command changes your **default** namespace for the current shell?"
+    kind: recall
+    answer: "`kubectl config set-context --current --namespace=NS`."
+    concept: namespaces
+  - prompt: "You want every new Pod to auto-get a small `requests` block if missing. Which object?"
+    kind: scenario
+    answer: "A `LimitRange` in the namespace with `defaultRequest` (and `default` for limits) under `spec.limits[].type: Container`."
+    concept: resource-quotas
+common_mistakes:
+  - mistake: "Forgetting `-n NS` on `kubectl` commands and 'losing' resources you just created."
+    fix: "Get in the habit of always adding `-n`, or set the default namespace with `kubectl config set-context`."
+  - mistake: "Adding a CPU/memory quota without a LimitRange. Old Pods pass; every new one is rejected."
+    fix: "Pair `ResourceQuota` with a `LimitRange` so Pods without explicit requests still work."
+  - mistake: "Deleting only individual resources when tearing down a demo."
+    fix: "Delete the whole namespace: `kubectl delete ns NAME`. Everything inside is removed."
+summary: |
+  Namespaces group resources; ResourceQuota caps how much a
+  namespace can use in total. Once a CPU/memory quota exists,
+  every new Pod must set requests — or a LimitRange must provide
+  defaults. Use `-n` (or set the default) to avoid ghost-Pod
+  bugs.
+spaced_hooks:
+  - concept: namespaces
+    when: next
+  - concept: resource-quotas
+    when: next
+  - concept: namespaces
+    when: "2-3"
+  - concept: resource-quotas
+    when: "5-7"
 cheat: |
   ### Namespaces and Quotas
   **Namespace commands:**

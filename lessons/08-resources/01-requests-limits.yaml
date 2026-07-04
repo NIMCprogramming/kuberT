@@ -3,6 +3,12 @@ title: "Requests and Limits"
 module: resources
 order: 1
 estimated_minutes: 15
+learning_goal: "Set CPU and memory requests and limits on a Pod and read them back with jsonpath."
+prerequisites:
+  - pods
+  - yaml-apply
+  - deployment
+  - pod-security
 intro: |
   # CPU and memory: requests and limits
 
@@ -45,7 +51,19 @@ intro: |
             cpu:    200m
             memory: 128Mi
   ```
-
+warm_up:
+  - prompt: "What is a Pod, and which YAML field lists its containers?"
+    answer: "The smallest unit in Kubernetes. Its containers live under `spec.containers`."
+    kind: recall
+    concept: pods
+  - prompt: "You want to run 3 copies of a web app and have new ones start when one dies. Which object?"
+    answer: "A `Deployment` with `replicas: 3`. It keeps that many Pods running for you."
+    kind: recall
+    concept: deployment
+  - prompt: "Which securityContext setting says 'do not run this as root'?"
+    answer: "`runAsNonRoot: true` (usually with `runAsUser: 1000`)."
+    kind: recall
+    concept: pod-security
 task: |
   **Your goal:** build a Pod with resource settings.
 
@@ -74,6 +92,76 @@ hint: |
     `kubectl get pod sizer -o jsonpath='{.spec.containers[0].resources.limits.memory}'`
   - Reader-friendly view: `kubectl describe pod sizer` and look at the Requests/Limits section.
 requires: [cluster]
+troubleshooting:
+  scenario: |
+    You apply this Pod but STATUS stays `Pending` for a long time.
+    `kubectl describe pod big` events say:
+    `0/1 nodes are available: 1 Insufficient cpu.`
+    ```yaml
+    resources:
+      requests:
+        cpu: "5"          # <-- 5 whole cores
+        memory: 64Mi
+      limits:
+        cpu: "5"
+        memory: 128Mi
+    ```
+  question: "Why is the Pod Pending?"
+  diagnosis: |
+    `requests.cpu: 5` = 5 whole cores. No node has 5 free cores,
+    so the scheduler cannot place the Pod. It stays `Pending`
+    and Kubernetes tells you exactly that in the event.
+
+    Two fixes:
+    - Lower `requests.cpu` to something realistic (e.g. `100m`).
+    - Or add nodes / a bigger node.
+
+    Tip: `kubectl describe node NODE` shows "Allocatable" and
+    "Allocated resources". Compare your request to those numbers.
+  concept: requests-limits
+review_questions:
+  - prompt: "What does `cpu: 500m` mean?"
+    kind: multiple_choice
+    options:
+      - "500 megabytes of CPU"
+      - "500 whole cores"
+      - "Half of one CPU core"
+      - "500% of one core"
+    answer: "Half of one CPU core (500 milli-cores)."
+    concept: requests-limits
+  - prompt: "A container goes above its memory limit. What happens?"
+    kind: recall
+    answer: "The container is **OOMKilled** (Out Of Memory). Kubernetes restarts it (per the Pod restart policy) and you see the reason in `kubectl describe pod`."
+    concept: requests-limits
+  - prompt: "A container goes above its CPU limit. What happens?"
+    kind: recall
+    answer: "It is **throttled** (slowed down). Not killed. The app runs but slower."
+    concept: requests-limits
+  - prompt: "Your HPA (autoscaler) refuses to scale. Support tells you the Pod has no requests. Why does that matter?"
+    kind: scenario
+    answer: "HPA scales on CPU/memory usage as a percentage of the **request**. Without requests, the percentage is meaningless, so HPA cannot decide. Set `requests.cpu` and `requests.memory` and try again."
+    concept: requests-limits
+common_mistakes:
+  - mistake: "No `requests` at all. Scheduler packs the node badly, HPA cannot work, and noisy Pods steal CPU."
+    fix: "Always set `requests.cpu` and `requests.memory` — even small values like `50m` and `32Mi`."
+  - mistake: "Setting the memory `limit` too tight, then wondering why the Pod restarts randomly."
+    fix: "Measure real usage (`kubectl top pod`). Set the limit ~20-50% above the peak, not right at it."
+  - mistake: "Writing `cpu: 500` when you meant `500m`."
+    fix: "Whole numbers = whole cores. Milli-cores need the `m` suffix (`500m` = 0.5 core)."
+summary: |
+  `requests` = min guaranteed (used to schedule). `limits` = max
+  allowed (throttle on CPU, kill on memory). Always set requests.
+  Autoscaling and fair scheduling depend on them. You will build
+  on this in Namespaces + Quotas and again in HPA / VPA.
+spaced_hooks:
+  - concept: requests-limits
+    when: next
+  - concept: requests-limits
+    when: "2-3"
+  - concept: requests-limits
+    when: "5-7"
+  - concept: requests-limits
+    when: capstone
 cheat: |
   ### Requests and Limits
   - **Request** = min guaranteed. Scheduler uses it to place the Pod.

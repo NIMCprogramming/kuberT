@@ -3,6 +3,11 @@ title: "Optimize resource usage"
 module: resources
 order: 3
 estimated_minutes: 6
+learning_goal: "Name the small habits that lower cluster bills: measure first, right-size requests, HPA, LimitRange, small images."
+prerequisites:
+  - requests-limits
+  - namespaces
+  - deployment
 intro: |
   # Save CPU and memory
 
@@ -28,8 +33,98 @@ intro: |
   - Use smaller base images (Alpine, distroless).
 
   This lesson is for reading only.
+warm_up:
+  - prompt: "What does `requests.memory: 64Mi` mean?"
+    answer: "The container asks for 64 mebibytes of memory. Scheduler uses this to place the Pod on a node with room."
+    kind: recall
+    concept: requests-limits
+  - prompt: "You added a CPU quota to a namespace. Why do new Pods now fail?"
+    answer: "Every Pod must set `requests` once the quota exists. Add requests, or use a LimitRange to default them."
+    kind: recall
+    concept: resource-quotas
+  - prompt: "How do you make a Deployment scale from 2 to 10 replicas by hand?"
+    answer: "`kubectl scale deploy NAME --replicas=10` (or edit `spec.replicas`)."
+    kind: recall
+    concept: deployment
 task: |
   No task. Press `c`.
+troubleshooting:
+  scenario: |
+    Your finance team says the cluster bill doubled last month.
+    You run:
+    ```
+    $ kubectl top pod -A --sort-by=cpu | head
+    NAMESPACE   NAME     CPU(cores)   MEMORY(bytes)
+    web         api-1    12m          40Mi
+    web         api-2    9m           38Mi
+    web         api-3    11m          41Mi
+    ...
+    ```
+    But every Pod in `web` has:
+    ```yaml
+    resources:
+      requests: { cpu: "1", memory: 1Gi }
+    ```
+  question: "Where is the money going, and what would you change?"
+  diagnosis: |
+    Requests are way over real usage: the Pods actually use
+    ~12m CPU / ~40Mi memory but ask for 1 core and 1Gi. The
+    scheduler reserves those big numbers even though nothing uses
+    them, so the cluster runs out of allocatable capacity and
+    needs more (paid) nodes.
+
+    Fix (based on measured usage):
+    ```yaml
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }   # small buffer above real usage
+      limits:   { cpu: 300m, memory: 256Mi }
+    ```
+    Redeploy and watch `kubectl top` again for one day before
+    tightening more.
+  concept: optimize-usage
+review_questions:
+  - prompt: "Which command shows the real CPU/memory a Pod is using?"
+    kind: multiple_choice
+    options:
+      - "`kubectl describe pod`"
+      - "`kubectl get pod -o yaml`"
+      - "`kubectl top pod`"
+      - "`kubectl logs`"
+    answer: "`kubectl top pod` (needs metrics-server installed)."
+    concept: optimize-usage
+  - prompt: "What does a LimitRange do that helps optimize usage?"
+    kind: recall
+    answer: "Sets default `requests` and `limits` on Pods that do not declare their own, so no Pod is created 'unbounded'."
+    concept: optimize-usage
+  - prompt: "What is the biggest hidden cost of setting requests much higher than real usage?"
+    kind: scenario
+    answer: "The scheduler reserves that capacity even though it is idle. The cluster looks full, so autoscaling adds nodes you did not need. Money wasted."
+    concept: optimize-usage
+  - prompt: "Which module will help you scale replicas up and down with real load?"
+    kind: recall
+    answer: "Module 12 — HPA (Horizontal Pod Autoscaler) and VPA."
+    concept: optimize-usage
+common_mistakes:
+  - mistake: "Copying requests from a template without ever measuring the app."
+    fix: "Install metrics-server, watch `kubectl top pod` for a day, then tune."
+  - mistake: "Setting HPA without `requests`. HPA silently does nothing."
+    fix: "HPA measures usage as % of requests. No requests = no scaling. Set requests first."
+  - mistake: "Leaving old test Deployments running in staging."
+    fix: "Run `kubectl get all -A` from time to time and delete what nobody owns."
+summary: |
+  Cheap clusters come from measurement, not guesses. Right-size
+  requests, use LimitRange for safety nets, HPA for load, and
+  small base images. This ties every earlier lesson (Pods,
+  Deployments, Namespaces) to the autoscaling module ahead.
+spaced_hooks:
+  - concept: optimize-usage
+    when: next
+  - concept: optimize-usage
+    when: "2-3"
+  - concept: optimize-usage
+    when: "5-7"
+  - concept: optimize-usage
+    when: capstone
 cheat: |
   ### Save CPU and memory
   - **Measure first** — install `metrics-server`, then `kubectl top pod` / `kubectl top node`.
