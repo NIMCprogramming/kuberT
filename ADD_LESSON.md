@@ -44,6 +44,9 @@ module: running-apps                  # required — matches folder slug (withou
 order: 2                              # required — order inside the module
 estimated_minutes: 8                  # optional — default 5
 
+learning_goal: "..."                  # optional — one line, what learner can do after
+prerequisites: [pods, labels]         # optional — concept slugs from earlier lessons
+
 intro: |                              # required — markdown shown first
   # ReplicaSets
 
@@ -60,12 +63,76 @@ hint: "kubectl apply -f rs.yaml  (try `kubectl get rs` to check progress)"
 
 requires: [cluster]                   # optional — see step 5
 
+warm_up:                              # optional — recall Qs from PREVIOUS lessons
+  - prompt: "..."
+    answer: "..."
+    kind: recall                       # recall | multiple_choice | debug | scenario
+    concept: some-concept              # for missed-concept logging
+
+troubleshooting:                      # optional — one broken YAML/output + fix
+  scenario: |
+    ...broken YAML or command output...
+  question: "What is wrong?"
+  diagnosis: |
+    ...explanation and fix...
+  concept: some-concept
+
+review_questions:                     # optional — 3–5 mixed Qs about NEW concept
+  - prompt: "..."
+    answer: "..."
+    kind: multiple_choice
+    options: ["A", "B", "C", "D"]
+    concept: some-concept
+
+common_mistakes:                      # optional — misconceptions + how to avoid
+  - mistake: "..."
+    fix: "..."
+
+summary: "..."                        # optional — one short paragraph at the end
+
+spaced_hooks:                         # optional — author metadata: revisit forward
+  - concept: some-concept
+    when: next                         # next | "2-3" | "5-7" | capstone
+
+cheat: |                              # optional — quick reference after finishing
+  ### Title
+  - bullet points
+
 check:                                # required — see step 4
   type: command
   cmd: "kubectl get rs web -o jsonpath='{.status.readyReplicas}'"
   expect: "3"
   timeout_seconds: 30
 ```
+
+### Recall / review fields — the learning-science layer
+
+These fields turn a static lesson into an active one. Use them for
+**spaced repetition**, **retrieval practice**, and **interleaving**.
+
+- **`learning_goal`** — the one thing the learner can DO after this lesson.
+- **`prerequisites`** — concept slugs from earlier lessons the learner must have.
+- **`warm_up`** — 2–3 short recall questions from PREVIOUS lessons. Shown before the intro. Force the learner to remember old material before new material is added on top.
+- **`troubleshooting`** — one realistic broken YAML or bad command output + a "what is wrong?" question + the diagnosis. Trains debugging.
+- **`review_questions`** — 3–5 questions at the end. Mix the four `kind` values:
+  - `recall` — free recall (learner types nothing; app just reveals the answer)
+  - `multiple_choice` — set `options: [A, B, C, D]` and `answer` matches one entry
+  - `debug` — a broken snippet and "what is the fix?"
+  - `scenario` — "you need X, which resource fits?"
+- **`common_mistakes`** — 2–3 known misconceptions with the corrective fix.
+- **`summary`** — one short paragraph that reinforces the key idea. Shown last.
+- **`spaced_hooks`** — author metadata (not shown to learner). Marks which concept from THIS lesson should be reviewed later:
+  - `next` — in the next lesson
+  - `"2-3"` — 2–3 lessons later (quote it — YAML would read `2-3` as a string only if quoted)
+  - `"5-7"` — 5–7 lessons later
+  - `capstone` — in the final project
+
+Use `/home/zymmio/projects/kuberT/LESSON_REVIEW_MAP.md` to know **which** concepts to reach back for. Look up the current lesson in "Recall in" and "Common failure mode" columns.
+
+In the Textual app, warm-up and review questions are driven by the
+`QuizScreen`: press **w** for warm-up, **r** for review. Space reveals
+the answer, **y** = "I knew it", **n** = "I missed it" (logs the
+`concept` to `~/.kubert/progress.json` for future mistake-based review).
 
 ### Field rules
 - All text fields use **A2 English**: short sentences (8–12 words), simple words, no idioms. Define every K8s term the first time. See `feedback-lessons-a2-english` in memory.

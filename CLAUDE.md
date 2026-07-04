@@ -81,12 +81,22 @@ title: "Your first Pod"
 module: running-apps
 order: 1
 estimated_minutes: 10
+learning_goal: "Create a Pod and read its logs."   # optional, one line
+prerequisites: [containers, kubectl]               # optional, concept slugs
 intro: |                       # markdown shown to the user
   ...
 task: |                        # what the user must do
   ...
 hint: "..."                    # optional one-liner hint
 requires: [cluster]            # what must be ready BEFORE the lesson starts (optional)
+warm_up: [...]                 # optional — recall Qs from PREVIOUS lessons
+troubleshooting: {...}         # optional — one broken YAML + question + diagnosis
+review_questions: [...]        # optional — 3–5 mixed-kind questions at the end
+common_mistakes: [...]         # optional — misconceptions + fixes
+summary: "..."                 # optional — one short paragraph
+spaced_hooks: [...]            # optional — author metadata, revisit forward
+cheat: |                       # optional — quick reference after finishing
+  ...
 check:
   type: manual                 # OR command / multiple
   # for command:
@@ -94,6 +104,10 @@ check:
   # expect: "Running"
   # timeout_seconds: 30
 ```
+
+Full details of the recall / review fields (warm_up, review_questions,
+etc.) are in **[ADD_LESSON.md](./ADD_LESSON.md)** and mapped concept-by-
+concept in **[LESSON_REVIEW_MAP.md](./LESSON_REVIEW_MAP.md)**.
 
 #### `requires` field
 
